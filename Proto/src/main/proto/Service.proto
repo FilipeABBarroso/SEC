@@ -1,0 +1,50 @@
+syntax = "proto3";
+option java_multiple_files = true;
+package tecnico.sec.grpc;
+
+message OpenAccountRequest {
+  string publicKey = 1;
+  string HMAC = 2;
+}
+
+message OpenAccountResponse {
+}
+
+message SendAmountRequest {
+  string publicKeySource = 1;
+  string publicKeyDestination = 2;
+  int32 amount = 3;
+}
+
+message SendAmountResponse {
+}
+message ReceiveAmountRequest {
+  string publicKey = 1;
+  int32 transactionID = 2;
+}
+
+message ReceiveAmountResponse {
+}
+message CheckAccountRequest {
+  string publicKey = 1;
+}
+
+message CheckAccountResponse {
+  int32 balance = 1;
+  repeated string transactions = 2;
+}
+message AuditRequest {
+  string publicKey = 1;
+}
+
+message AuditResponse {
+  repeated string transactions = 2;
+}
+
+service Service {
+  rpc openAccount(OpenAccountRequest) returns (OpenAccountResponse);
+  rpc sendAmount(SendAmountRequest) returns (SendAmountResponse);
+  rpc receiveAmount(ReceiveAmountRequest) returns (ReceiveAmountResponse);
+  rpc checkAccount(CheckAccountRequest) returns (CheckAccountResponse);
+  rpc Audit(AuditRequest) returns (AuditResponse);
+}
