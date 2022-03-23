@@ -1,6 +1,11 @@
 package tecnico.sec.client;
 
+import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 import java.util.Scanner;
 
 import static tecnico.sec.client.Client.*;
@@ -23,15 +28,10 @@ public class Main {
             int selected = in.nextInt();
             switch (selected) {
                 case 1 -> {
-                    System.out.println("How much you want to send?");
-                    int amount = in.nextInt();
-                    // TODO get account to send
-                    send_amount(client.getPublicKey(), client.getPublicKey(), amount);
+                    send_amount_request(client);
                 }
                 case 2 -> {
-                    int balance = check_account(client.getPublicKey());
-                    System.out.println("Your balance is " + balance + "Gs\n");
-                    //TODO display incoming transfers
+                    check_account_request(client);
                 }
                 case 3 -> {
                     receive_amount(client.getPublicKey());
@@ -45,5 +45,35 @@ public class Main {
                 }
             }
         }
+    }
+
+    public static PublicKey stringToPublicKey(String pubKeyString) throws NoSuchAlgorithmException, InvalidKeySpecException {
+        byte[] publicBytes = Base64.getDecoder().decode(pubKeyString);
+        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+        return keyFactory.generatePublic(keySpec);
+    }
+
+    public static void send_amount_request(Client client){
+        Scanner in = new Scanner(System.in);
+        System.out.println("Send to who?");
+        String destination = in.nextLine();
+        PublicKey destinationPubKey = null;
+        try {
+            destinationPubKey = stringToPublicKey(destination);
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+            System.out.println("Public key not valid!");
+            return;
+        }
+        System.out.println("How much you want to send?");
+        int amount = in.nextInt();
+
+        send_amount(client.getPublicKey(), destinationPubKey, amount);
+    }
+
+    public static void check_account_request(Client client) {
+        int balance = check_account(client.getPublicKey());
+        System.out.println("Your balance is " + balance + "Gs\n");
+        //TODO display incoming transfers
     }
 }

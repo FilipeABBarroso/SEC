@@ -3,6 +3,8 @@ package tecnico.sec.client;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
+import tecnico.sec.grpc.*;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -11,6 +13,7 @@ import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 import java.util.Scanner;
 
 public class Client{
@@ -35,7 +38,7 @@ public class Client{
         return keyPair.getPrivate();
     }
 
-    public static KeyPair generate_credentials() throws NoSuchAlgorithmException {
+    public static KeyPair generateCredentials() throws NoSuchAlgorithmException {
         KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
         keyGen.initialize(4096);
         return keyGen.generateKeyPair();
@@ -100,8 +103,10 @@ public class Client{
             System.out.println("Account Loaded!\n");
         } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
             System.out.println("No account found! Creating a new account...\n");
-            client = new Client(generate_credentials());
+            client = new Client(generateCredentials());
+            System.out.println(Base64.getEncoder().encodeToString(client.getPublicKey().getEncoded()));
             open_account(client.getPublicKey());
+            System.out.println(client.getPublicKey().toString());
             saveKeyPair(client.getKeyPair());
         }
         return client;
@@ -112,7 +117,11 @@ public class Client{
         ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", 8080)
                 .usePlaintext()
                 .build();
-        //AccountServiceGrpc.AccountServiceBlockingStub stub = AccountServiceGrpc.newBlockingStub(channel);
+        ServiceGrpc.ServiceBlockingStub stub = ServiceGrpc.newBlockingStub(channel);
+        OpenAccountResponse openResponse = stub.openAccount(OpenAccountRequest.newBuilder()
+                .setPublicKey(key.toString())
+                .setHMAC("HMAC")
+                .build());
     }
 
     public static void send_amount(PublicKey source, PublicKey destination, int amount){
