@@ -14,17 +14,23 @@ import java.util.Base64;
 
 public class KeyStore {
 
-    private static Credentials credentials;
+    private static KeyPair credentials;
 
-    public static Credentials getCredentials(){
-        if(credentials != null){
-            return credentials;
-        }
-        else{
-            //todo read file create credentials assign to static variable and return it
-            return null;
-        }
+    private static final String KEYSTOREPATH = "PUT PATH HERE";
 
+    public static KeyPair getCredentials() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+        if (credentials == null) {
+            credentials = loadKeyPair(KEYSTOREPATH);
+        }
+        return credentials;
+    }
+
+    public static PublicKey getPublicKey(){
+        return credentials.getPublic();
+    }
+
+    public static PrivateKey getPrivateKey(){
+        return credentials.getPrivate();
     }
 
     public static PublicKey stringToPubKey(String pubKeyString) throws NoSuchAlgorithmException, InvalidKeySpecException {
@@ -61,7 +67,7 @@ public class KeyStore {
         }
     }
 
-    public static KeyPair LoadKeyPair(String path) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+    private static KeyPair loadKeyPair(String path) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
         // Read Public Key.
         File filePublicKey = new File(path + "public.key");
         FileInputStream fis = new FileInputStream(path + "public.key");
@@ -87,15 +93,5 @@ public class KeyStore {
         PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);
 
         return new KeyPair(publicKey, privateKey);
-    }
-
-    public static String getPublicKey(){
-        Credentials credentials = getCredentials();
-        return credentials.getPublicKey();
-    }
-
-    public static String getPrivateKey(){
-        Credentials credentials = getCredentials();
-        return credentials.getPrivateKey();
     }
 }
