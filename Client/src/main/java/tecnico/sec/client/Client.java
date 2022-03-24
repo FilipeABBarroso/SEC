@@ -105,7 +105,6 @@ public class Client{
         //TODO
         OpenAccountResponse openResponse = stub.openAccount(OpenAccountRequest.newBuilder()
                 .setPublicKey(pubKeyToString(key))
-                .setHMAC("HMAC")
                 .build());
     }
 
