@@ -1,5 +1,7 @@
 package tecnico.sec.KeyStore.singletons;
 
+import tecnico.sec.proto.exceptions.KeyExceptions;
+
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,11 +38,15 @@ public class KeyStore {
         return credentials.getPrivate();
     }
 
-    public static PublicKey stringToPubKey(String pubKeyString) throws InvalidKeySpecException {
-        byte[] publicBytes = Base64.getDecoder().decode(pubKeyString);
-        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
-        KeyFactory keyFactory = KeyTools.getKeyFactory();
-        return keyFactory.generatePublic(keySpec);
+    public static PublicKey stringToPubKey(String pubKeyString) throws KeyExceptions.InvalidPublicKeyException {
+        try {
+            byte[] publicBytes = Base64.getDecoder().decode(pubKeyString);
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
+            KeyFactory keyFactory = KeyTools.getKeyFactory();
+            return keyFactory.generatePublic(keySpec);
+        } catch (InvalidKeySpecException e) {
+            throw new KeyExceptions.InvalidPublicKeyException();
+        }
     }
 
     public static String pubKeyToString(PublicKey pubKey) {

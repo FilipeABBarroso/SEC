@@ -1,5 +1,10 @@
 package tecnico.sec.KeyStore.singletons;
 
+import tecnico.sec.proto.exceptions.BaseException;
+import tecnico.sec.proto.exceptions.IOExceptions;
+import tecnico.sec.proto.exceptions.KeyExceptions;
+import tecnico.sec.proto.exceptions.SignatureExceptions;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
@@ -7,28 +12,36 @@ import java.security.*;
 
 public class Sign {
 
-    public byte[] signMessage(Object ... args) throws SignatureException, InvalidKeyException {
-        Signature signature = SignTools.getSignature();
-        signature.initSign(KeyStore.getPrivateKey());
+    public static byte[] signMessage(Object ... args) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, IOExceptions.IOException {
         try {
+            Signature signature = SignTools.getSignature();
+            signature.initSign(KeyStore.getPrivateKey());
             byte[] toSign = SignTools.argsToBytes(args);
             signature.update(toSign);
+            return signature.sign();
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new IOExceptions.IOException();
+        } catch (SignatureException e) {
+            throw new SignatureExceptions.CanNotSignException();
+        } catch (InvalidKeyException e) {
+            throw new KeyExceptions.InvalidPublicKeyException();
         }
-        return signature.sign();
     }
 
-    public boolean checkSignature(PublicKey publicKey , byte[] toVerifySignature, Object ... args) throws SignatureException, InvalidKeyException {
-        Signature signature = SignTools.getSignature();
-        signature.initVerify(publicKey);
+    public static void checkSignature(PublicKey publicKey , byte[] toVerifySignature, Object ... args) throws IOExceptions.IOException, SignatureExceptions.CanNotSignException, KeyExceptions.InvalidPublicKeyException, SignatureExceptions.SignatureDoNotMatchException {
         try {
+            Signature signature = SignTools.getSignature();
+            signature.initVerify(publicKey);
             byte[] toValidate = SignTools.argsToBytes(args);
             signature.update(toValidate);
+            if(!signature.verify(toVerifySignature)) throw new SignatureExceptions.SignatureDoNotMatchException();
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new IOExceptions.IOException();
+        } catch (SignatureException e) {
+            throw new SignatureExceptions.CanNotSignException();
+        } catch (InvalidKeyException e) {
+            throw new KeyExceptions.InvalidPublicKeyException();
         }
-        return signature.verify(toVerifySignature);
     }
 }
 
