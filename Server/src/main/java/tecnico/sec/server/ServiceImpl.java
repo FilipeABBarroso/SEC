@@ -1,5 +1,6 @@
 package tecnico.sec.server;
 import io.grpc.stub.StreamObserver;
+import tecnico.sec.KeyStore.singletons.KeyStore;
 import tecnico.sec.grpc.*;
 import tecnico.sec.grpc.ServiceGrpc.ServiceImplBase;
 

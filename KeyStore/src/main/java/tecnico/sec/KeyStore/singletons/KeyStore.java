@@ -1,7 +1,5 @@
 package tecnico.sec.KeyStore.singletons;
 
-import tecnico.sec.KeyStore.Credentials;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
