@@ -1,6 +1,7 @@
 package tecnico.sec.client;
 
 import java.security.KeyFactory;
+import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
@@ -14,29 +15,34 @@ public class Main {
 
     public static void main(String[] args) throws NoSuchAlgorithmException {
         System.out.println("Welcome to BFTB!\n");
-        Client client = initClient("");
+        Client client = new Client("localhost",8080);
+        KeyPair clientKeys = initCredentials("");
         while(true){
             Scanner in = new Scanner(System.in);
             System.out.println("""
                     Select what you want to do:
+                    0.Open Account
                     1.Send Money
                     2.Check Balance
                     3.Receive Money
                     4.Audit Account
-                    0.Leave""");
+                    5.Leave""");
             int selected = in.nextInt();
             switch (selected) {
+                case 0 -> {
+                    client.open_account(clientKeys.getPublic());
+                }
                 case 1 -> {
-                    send_amount_request(client);
+                    send_amount_request(client, clientKeys);
                 }
                 case 2 -> {
-                    check_account_request(client);
+                    client.check_account(clientKeys.getPublic());
                 }
                 case 3 -> {
-                    receive_amount(client.getPublicKey());
+                    receive_amount_request(client, clientKeys);
                 }
                 case 4 -> {
-                    audit(client.getPublicKey());
+                    client.audit(clientKeys.getPublic());
                 }
                 default -> {
                     System.out.println("Goodbye!");
@@ -57,7 +63,7 @@ public class Main {
         return Base64.getEncoder().encodeToString(pubKey.getEncoded());
     }
 
-    public static void send_amount_request(Client client){
+    public static void send_amount_request(Client client, KeyPair clientKeys){
         Scanner in = new Scanner(System.in);
         System.out.println("Send to who?");
         String destination = in.nextLine();
@@ -71,12 +77,13 @@ public class Main {
         System.out.println("How much you want to send?");
         int amount = in.nextInt();
 
-        send_amount(client.getPublicKey(), destinationPubKey, amount);
+        client.send_amount(clientKeys.getPublic(), destinationPubKey, amount);
     }
 
-    public static void check_account_request(Client client) {
-        int balance = check_account(client.getPublicKey());
-        System.out.println("Your balance is " + balance + "Gs\n");
-        //TODO display incoming transfers
+    public static void receive_amount_request(Client client, KeyPair clientKeys) {
+        Scanner in = new Scanner(System.in);
+        System.out.println("What transactionID you want to receive?");
+        int transactionID = in.nextInt();
+        client.receive_amount(clientKeys.getPublic(), transactionID);
     }
 }
