@@ -10,12 +10,11 @@ import java.util.Scanner;
 
 import static tecnico.sec.client.Client.*;
 
-
 public class Main {
 
     public static void main(String[] args) throws NoSuchAlgorithmException {
         System.out.println("Welcome to BFTB!\n");
-        Client client = initClient();
+        Client client = initClient("");
         while(true){
             Scanner in = new Scanner(System.in);
             System.out.println("""
@@ -47,11 +46,15 @@ public class Main {
         }
     }
 
-    public static PublicKey stringToPublicKey(String pubKeyString) throws NoSuchAlgorithmException, InvalidKeySpecException {
+    public static PublicKey stringToPubKey(String pubKeyString) throws NoSuchAlgorithmException, InvalidKeySpecException {
         byte[] publicBytes = Base64.getDecoder().decode(pubKeyString);
         X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         return keyFactory.generatePublic(keySpec);
+    }
+
+    public static String pubKeyToString(PublicKey pubKey) {
+        return Base64.getEncoder().encodeToString(pubKey.getEncoded());
     }
 
     public static void send_amount_request(Client client){
@@ -60,7 +63,7 @@ public class Main {
         String destination = in.nextLine();
         PublicKey destinationPubKey = null;
         try {
-            destinationPubKey = stringToPublicKey(destination);
+            destinationPubKey = stringToPubKey(destination);
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             System.out.println("Public key not valid!");
             return;
