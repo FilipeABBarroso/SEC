@@ -9,14 +9,15 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Scanner;
 
-import static tecnico.sec.client.Client.*;
+import tecnico.sec.client.Client.*;
+import static tecnico.sec.KeyStore.singletons.KeyStore.getCredentials;
 
 public class Main {
 
     public static void main(String[] args) throws NoSuchAlgorithmException {
         System.out.println("Welcome to BFTB!\n");
         Client client = new Client("localhost",8080);
-        KeyPair clientKeys = initCredentials("");
+        KeyPair clientKeys = getCredentials();
         while(true){
             Scanner in = new Scanner(System.in);
             System.out.println("""
