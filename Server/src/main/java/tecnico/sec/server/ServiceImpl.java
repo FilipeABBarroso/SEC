@@ -1,15 +1,29 @@
 package tecnico.sec.server;
 import io.grpc.stub.StreamObserver;
+import tecnico.sec.KeyStore.singletons.KeyStore;
+import tecnico.sec.KeyStore.singletons.Sign;
 import tecnico.sec.grpc.*;
 import tecnico.sec.grpc.ServiceGrpc.ServiceImplBase;
+import tecnico.sec.proto.exceptions.BaseException;
+import tecnico.sec.proto.exceptions.IOExceptions;
+
+import java.security.PublicKey;
 
 public class ServiceImpl extends ServiceImplBase {
 
     @Override
     public void openAccount(OpenAccountRequest request, StreamObserver<OpenAccountResponse> responseObserver) {
         final int BASE_BALANCE = 1000000;
-        String publicKey = request.getPublicKey();
-        //todo Check if the publicKey exists in the database and if exists do respondeObserver.onError("ERROR")
+        try {
+            PublicKey publicKey = KeyStore.stringToPubKey(request.getPublicKey());
+            byte[] signature = request.getSignature().toByteArray();
+            Sign.checkSignature(publicKey, signature, publicKey);
+        } catch (IOExceptions.IOException e){
+            System.out.println(e.toResponseException().getMessage());
+        } catch (BaseException e) {
+            responseObserver.onError(e.toResponseException());
+        }
+        //todo Check if the publicKey exists in the database and if exists do responseObserver.onError("ERROR")
         //todo Create a entry in the BALANCE database with the PK public key and the balance as BASE_BALANCE
     }
 

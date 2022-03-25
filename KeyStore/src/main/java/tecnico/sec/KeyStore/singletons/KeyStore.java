@@ -1,11 +1,11 @@
 package tecnico.sec.KeyStore.singletons;
 
-import tecnico.sec.KeyStore.Credentials;
+import tecnico.sec.proto.exceptions.KeyExceptions;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -16,11 +16,16 @@ public class KeyStore {
 
     private static KeyPair credentials;
 
-    private static final String KEYSTOREPATH = "PUT PATH HERE";
+    private static final String KEYSTOREPATH = "/keys/";
 
-    public static KeyPair getCredentials() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
+    public static KeyPair getCredentials() {
         if (credentials == null) {
-            credentials = loadKeyPair(KEYSTOREPATH);
+            try {
+                credentials = loadKeyPair();
+            } catch (IOException | InvalidKeySpecException e) {
+                credentials = KeyTools.getKeyPairGenerator().generateKeyPair();
+                saveKeyPair(credentials);
+            }
         }
         return credentials;
     }
@@ -33,65 +38,89 @@ public class KeyStore {
         return credentials.getPrivate();
     }
 
-    public static PublicKey stringToPubKey(String pubKeyString) throws NoSuchAlgorithmException, InvalidKeySpecException {
-        byte[] publicBytes = Base64.getDecoder().decode(pubKeyString);
-        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        return keyFactory.generatePublic(keySpec);
+    public static PublicKey stringToPubKey(String pubKeyString) throws KeyExceptions.InvalidPublicKeyException {
+        try {
+            byte[] publicBytes = Base64.getDecoder().decode(pubKeyString);
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
+            KeyFactory keyFactory = KeyTools.getKeyFactory();
+            return keyFactory.generatePublic(keySpec);
+        } catch (InvalidKeySpecException e) {
+            throw new KeyExceptions.InvalidPublicKeyException();
+        }
     }
 
     public static String pubKeyToString(PublicKey pubKey) {
         return Base64.getEncoder().encodeToString(pubKey.getEncoded());
     }
 
-    public static void saveKeyPair(KeyPair clientKeyPair, String path){
+    private static void saveToFile(String path , byte[] toSave) throws IOException {
+        FileOutputStream fos = new FileOutputStream( path);
+        fos.write(toSave);
+        fos.close();
+    }
+
+    private static void saveKeyPair(KeyPair keyPair){
         try {
-            PrivateKey privateKey = clientKeyPair.getPrivate();
-            PublicKey publicKey = clientKeyPair.getPublic();
+            PublicKey publicKey = keyPair.getPublic();
+            saveToFile(KEYSTOREPATH + "public.pub" , publicKey.getEncoded());
+            PrivateKey privateKey = keyPair.getPrivate();
+            saveToFile(KEYSTOREPATH + "private.key" , privateKey.getEncoded());
 
-            // Store Public Key.
-            X509EncodedKeySpec x509EncodedKeySpec = new X509EncodedKeySpec(
-                    publicKey.getEncoded());
-            FileOutputStream fos = new FileOutputStream( path + "public.key");
-            fos.write(x509EncodedKeySpec.getEncoded());
-            fos.close();
-
-            // Store Private Key.
-            PKCS8EncodedKeySpec pkcs8EncodedKeySpec = new PKCS8EncodedKeySpec(
-                    privateKey.getEncoded());
-            fos = new FileOutputStream(path + "private.key");
-            fos.write(pkcs8EncodedKeySpec.getEncoded());
-            fos.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private static KeyPair loadKeyPair(String path) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
-        // Read Public Key.
-        File filePublicKey = new File(path + "public.key");
-        FileInputStream fis = new FileInputStream(path + "public.key");
-        byte[] encodedPublicKey = new byte[(int) filePublicKey.length()];
-        fis.read(encodedPublicKey);
-        fis.close();
+    private static byte[] readFile(String path) throws IOException {
+        Path keyPath = Paths.get(path);
+        return Files.readAllBytes(keyPath);
+    }
 
-        // Read Private Key.
-        File filePrivateKey = new File(path + "private.key");
-        fis = new FileInputStream(path + "private.key");
-        byte[] encodedPrivateKey = new byte[(int) filePrivateKey.length()];
-        fis.read(encodedPrivateKey);
-        fis.close();
+    private static KeyPair loadKeyPair() throws InvalidKeySpecException, IOException {
 
-        // Generate KeyPair.
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(
-                encodedPublicKey);
+        KeyFactory keyFactory = KeyTools.getKeyFactory();
+
+        byte[] encodedPublicKey = readFile(KEYSTOREPATH + "public.pub");
+        X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(encodedPublicKey);
         PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
 
-        PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(
-                encodedPrivateKey);
+        byte[] encodedPrivateKey = readFile(KEYSTOREPATH + "private.key");
+        PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(encodedPrivateKey);
         PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);
 
         return new KeyPair(publicKey, privateKey);
     }
+
 }
+
+class KeyTools{
+
+    private static final String ALGORITHM = "RSA";
+
+    private static KeyFactory keyFactory;
+    private static KeyPairGenerator keyGen;
+
+    public static KeyFactory getKeyFactory(){
+        if (keyFactory == null) {
+            try {
+                keyFactory = KeyFactory.getInstance(ALGORITHM);
+            } catch (NoSuchAlgorithmException e) {
+                System.out.println("Key factory algorithm " + ALGORITHM + "not found.");
+            }
+        }
+        return keyFactory;
+    }
+
+    public static KeyPairGenerator getKeyPairGenerator(){
+        if (keyGen == null) {
+            try {
+                keyGen = KeyPairGenerator.getInstance(ALGORITHM);
+                keyGen.initialize(4096);
+            } catch (NoSuchAlgorithmException e) {
+                System.out.println("Key generator algorithm " + ALGORITHM + "not found.");
+            }
+        }
+        return keyGen;
+    }
+}
+
