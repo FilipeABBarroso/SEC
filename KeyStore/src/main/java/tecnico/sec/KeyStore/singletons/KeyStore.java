@@ -16,7 +16,7 @@ public class KeyStore {
 
     private static KeyPair credentials;
 
-    private static final String KEYSTOREPATH = "/keys/";
+    private static final String KEYSTOREPATH = "";
 
     public static KeyPair getCredentials() throws KeyExceptions.NoSuchAlgorithmException{
         if (credentials == null) {

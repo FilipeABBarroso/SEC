@@ -9,7 +9,10 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Scanner;
 
+import tecnico.sec.KeyStore.singletons.KeyStore;
 import tecnico.sec.client.Client.*;
+import tecnico.sec.proto.exceptions.KeyExceptions;
+
 import static tecnico.sec.KeyStore.singletons.KeyStore.getCredentials;
 
 public class Main {
@@ -17,7 +20,13 @@ public class Main {
     public static void main(String[] args) throws NoSuchAlgorithmException {
         System.out.println("Welcome to BFTB!\n");
         Client client = new Client("localhost",8080);
-        KeyPair clientKeys = getCredentials();
+
+        try {
+            getCredentials();
+        } catch (KeyExceptions.NoSuchAlgorithmException e) {
+            System.out.println("Error trying to get credentials...");
+            return;
+        }
         while(true){
             Scanner in = new Scanner(System.in);
             System.out.println("""
@@ -31,19 +40,19 @@ public class Main {
             int selected = in.nextInt();
             switch (selected) {
                 case 0 -> {
-                    client.open_account(clientKeys.getPublic());
+                    client.open_account(KeyStore.getPublicKey());
                 }
                 case 1 -> {
-                    send_amount_request(client, clientKeys);
+                    send_amount_request(client, KeyStore.getPublicKey());
                 }
                 case 2 -> {
-                    client.check_account(clientKeys.getPublic());
+                    client.check_account(KeyStore.getPublicKey());
                 }
                 case 3 -> {
-                    receive_amount_request(client, clientKeys);
+                    receive_amount_request(client, KeyStore.getPublicKey());
                 }
                 case 4 -> {
-                    client.audit(clientKeys.getPublic());
+                    client.audit(KeyStore.getPublicKey());
                 }
                 default -> {
                     System.out.println("Goodbye!");
@@ -64,7 +73,7 @@ public class Main {
         return Base64.getEncoder().encodeToString(pubKey.getEncoded());
     }
 
-    public static void send_amount_request(Client client, KeyPair clientKeys){
+    public static void send_amount_request(Client client, PublicKey pubKey){
         Scanner in = new Scanner(System.in);
         System.out.println("Send to who?");
         String destination = in.nextLine();
@@ -78,13 +87,13 @@ public class Main {
         System.out.println("How much you want to send?");
         int amount = in.nextInt();
 
-        client.send_amount(clientKeys.getPublic(), destinationPubKey, amount);
+        client.send_amount(pubKey, destinationPubKey, amount);
     }
 
-    public static void receive_amount_request(Client client, KeyPair clientKeys) {
+    public static void receive_amount_request(Client client, PublicKey pubKey) {
         Scanner in = new Scanner(System.in);
         System.out.println("What transactionID you want to receive?");
         int transactionID = in.nextInt();
-        client.receive_amount(clientKeys.getPublic(), transactionID);
+        client.receive_amount(pubKey, transactionID);
     }
 }
