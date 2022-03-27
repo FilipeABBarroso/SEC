@@ -2,46 +2,59 @@ syntax = "proto3";
 option java_multiple_files = true;
 package tecnico.sec.grpc;
 
-message OpenAccountRequest {
-  string publicKey = 1;
-  string HMAC = 2;
+message NonceRequest {
+}
+message NonceResponse {
+  int32 nonce = 1;
 }
 
+message OpenAccountRequest {
+  bytes publicKey = 1;
+  bytes signature = 2;
+}
 message OpenAccountResponse {
+  bytes signature = 2;
 }
 
 message SendAmountRequest {
-  string publicKeySource = 1;
-  string publicKeyDestination = 2;
+  bytes publicKeySource = 1;
+  bytes publicKeyDestination = 2;
   int32 amount = 3;
+  int32 nonce = 4;
+  bytes signature = 5;
 }
-
 message SendAmountResponse {
+  bytes signature = 2;
 }
+
 message ReceiveAmountRequest {
-  string publicKey = 1;
+  bytes publicKey = 1;
   int32 transactionID = 2;
+  bytes signature = 4;
 }
-
 message ReceiveAmountResponse {
-}
-message CheckAccountRequest {
-  string publicKey = 1;
+  bytes signature = 2;
 }
 
+message CheckAccountRequest {
+  bytes publicKey = 1;
+}
 message CheckAccountResponse {
   int32 balance = 1;
   repeated string transactions = 2;
-}
-message AuditRequest {
-  string publicKey = 1;
+  bytes signature = 3;
 }
 
+message AuditRequest {
+  bytes publicKey = 1;
+}
 message AuditResponse {
-  repeated string transactions = 2;
+  repeated string transactions = 1;
+  bytes signature = 2;
 }
 
 service Service {
+  rpc getNonce(NonceRequest) returns (NonceResponse);
   rpc openAccount(OpenAccountRequest) returns (OpenAccountResponse);
   rpc sendAmount(SendAmountRequest) returns (SendAmountResponse);
   rpc receiveAmount(ReceiveAmountRequest) returns (ReceiveAmountResponse);

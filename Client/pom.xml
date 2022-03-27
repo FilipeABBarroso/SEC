@@ -29,11 +29,6 @@
             <version>1.45.0</version>
         </dependency>
         <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-stub</artifactId>
-            <version>1.45.0</version>
-        </dependency>
-        <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>proto</artifactId>
             <version>1.0-SNAPSHOT</version>
@@ -42,7 +37,7 @@
 
 
     <properties>
-        <mainclass>tecnico.sec.server.Main</mainclass>
+        <mainclass>tecnico.sec.client.Main</mainclass>
     </properties>
 
     <build>
@@ -94,12 +89,17 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.0.0-M5</version>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>15</source>
+                    <target>15</target>
+                </configuration>
+            </plugin>
 
 
         </plugins>
-
-
-
 
     </build>
 
