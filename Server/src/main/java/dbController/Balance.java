@@ -32,7 +32,7 @@ public class Balance {
             PreparedStatement ps = conn.prepareStatement(query);
             ps.setBytes(1, publicKey);
             ps.setInt(2, initialBalance);
-            ResultSet rs = ps.executeQuery();
+            ps.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -46,7 +46,7 @@ public class Balance {
             PreparedStatement ps = conn.prepareStatement(query);
             ps.setInt(1, updatedBalance);
             ps.setBytes(2, publicKey);
-            ResultSet rs = ps.executeQuery();
+            ps.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
         }

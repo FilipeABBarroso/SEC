@@ -9,6 +9,7 @@
         <module name="Client" />
         <module name="Server" />
         <module name="Proto" />
+        <module name="keyStore" />
       </profile>
     </annotationProcessing>
   </component>
