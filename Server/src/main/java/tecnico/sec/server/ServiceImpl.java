@@ -17,7 +17,7 @@ public class ServiceImpl extends ServiceImplBase {
         try {
             PublicKey publicKey = KeyStore.stringToPubKey(request.getPublicKey());
             byte[] signature = request.getSignature().toByteArray();
-            Sign.checkSignature(publicKey, signature, publicKey);
+            Sign.checkSignature(publicKey, signature, request.getPublicKey());
         } catch (IOExceptions.IOException e){
             System.out.println(e.toResponseException().getMessage());
         } catch (BaseException e) {

@@ -18,7 +18,7 @@ public class KeyStore {
 
     private static final String KEYSTOREPATH = "/keys/";
 
-    public static KeyPair getCredentials() {
+    public static KeyPair getCredentials() throws KeyExceptions.NoSuchAlgorithmException{
         if (credentials == null) {
             try {
                 credentials = loadKeyPair();
@@ -38,7 +38,7 @@ public class KeyStore {
         return credentials.getPrivate();
     }
 
-    public static PublicKey stringToPubKey(String pubKeyString) throws KeyExceptions.InvalidPublicKeyException {
+    public static PublicKey stringToPubKey(String pubKeyString) throws KeyExceptions.InvalidPublicKeyException, KeyExceptions.NoSuchAlgorithmException {
         try {
             byte[] publicBytes = Base64.getDecoder().decode(pubKeyString);
             X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
@@ -54,7 +54,7 @@ public class KeyStore {
     }
 
     private static void saveToFile(String path , byte[] toSave) throws IOException {
-        FileOutputStream fos = new FileOutputStream( path);
+        FileOutputStream fos = new FileOutputStream(path);
         fos.write(toSave);
         fos.close();
     }
@@ -76,7 +76,7 @@ public class KeyStore {
         return Files.readAllBytes(keyPath);
     }
 
-    private static KeyPair loadKeyPair() throws InvalidKeySpecException, IOException {
+    private static KeyPair loadKeyPair() throws InvalidKeySpecException, IOException, KeyExceptions.NoSuchAlgorithmException {
 
         KeyFactory keyFactory = KeyTools.getKeyFactory();
 
@@ -100,24 +100,26 @@ class KeyTools{
     private static KeyFactory keyFactory;
     private static KeyPairGenerator keyGen;
 
-    public static KeyFactory getKeyFactory(){
+    public static KeyFactory getKeyFactory() throws KeyExceptions.NoSuchAlgorithmException {
         if (keyFactory == null) {
             try {
                 keyFactory = KeyFactory.getInstance(ALGORITHM);
             } catch (NoSuchAlgorithmException e) {
                 System.out.println("Key factory algorithm " + ALGORITHM + "not found.");
+                throw new KeyExceptions.NoSuchAlgorithmException();
             }
         }
         return keyFactory;
     }
 
-    public static KeyPairGenerator getKeyPairGenerator(){
+    public static KeyPairGenerator getKeyPairGenerator() throws KeyExceptions.NoSuchAlgorithmException {
         if (keyGen == null) {
             try {
                 keyGen = KeyPairGenerator.getInstance(ALGORITHM);
                 keyGen.initialize(4096);
             } catch (NoSuchAlgorithmException e) {
                 System.out.println("Key generator algorithm " + ALGORITHM + "not found.");
+                throw new KeyExceptions.NoSuchAlgorithmException();
             }
         }
         return keyGen;
