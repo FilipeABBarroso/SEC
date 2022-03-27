@@ -1,49 +1,92 @@
 package tecnico.sec.server;
 import io.grpc.stub.StreamObserver;
-import tecnico.sec.KeyStore.singletons.KeyStore;
 import tecnico.sec.KeyStore.singletons.Sign;
 import tecnico.sec.grpc.*;
 import tecnico.sec.grpc.ServiceGrpc.ServiceImplBase;
 import tecnico.sec.proto.exceptions.BaseException;
-import tecnico.sec.proto.exceptions.IOExceptions;
-
-import java.security.PublicKey;
 
 public class ServiceImpl extends ServiceImplBase {
 
     @Override
     public void openAccount(OpenAccountRequest request, StreamObserver<OpenAccountResponse> responseObserver) {
-        final int BASE_BALANCE = 1000000;
+        String publicKey = request.getPublicKey();
+        byte[] signature = request.getSignature().toByteArray();
+
         try {
-            PublicKey publicKey = KeyStore.stringToPubKey(request.getPublicKey());
-            byte[] signature = request.getSignature().toByteArray();
-            Sign.checkSignature(publicKey, signature, request.getPublicKey());
-        } catch (IOExceptions.IOException e){
-            System.out.println(e.toResponseException().getMessage());
+
+            Sign.checkSignature(publicKey, signature, publicKey);
+
+
         } catch (BaseException e) {
             responseObserver.onError(e.toResponseException());
         }
-        //todo Check if the publicKey exists in the database and if exists do responseObserver.onError("ERROR")
-        //todo Create a entry in the BALANCE database with the PK public key and the balance as BASE_BALANCE
+
+
     }
 
     @Override
     public void sendAmount(SendAmountRequest request, StreamObserver<SendAmountResponse> responseObserver) {
-        super.sendAmount(request, responseObserver);
+        String publicKeySource = request.getPublicKeySource();
+        String publicKeyDestination = request.getPublicKeyDestination();
+        int amount = request.getAmount();
+        int nonce = request.getNonce();
+        byte[] signature = request.getSignature().toByteArray();
+
+        try {
+
+            Sign.checkSignature(publicKeySource, signature, publicKeySource);
+
+
+        } catch (BaseException e) {
+            responseObserver.onError(e.toResponseException());
+        }
+
     }
 
     @Override
     public void receiveAmount(ReceiveAmountRequest request, StreamObserver<ReceiveAmountResponse> responseObserver) {
-        super.receiveAmount(request, responseObserver);
+        String publicKey = request.getPublicKey();
+        int transactionID = request.getTransactionID();
+        byte[] signature = request.getSignature().toByteArray();
+
+        try {
+
+            Sign.checkSignature(publicKey, signature, publicKey);
+
+
+        } catch (BaseException e) {
+            responseObserver.onError(e.toResponseException());
+        }
+
     }
 
     @Override
     public void checkAccount(CheckAccountRequest request, StreamObserver<CheckAccountResponse> responseObserver) {
-        super.checkAccount(request, responseObserver);
+        String publicKey = request.getPublicKey();
+        byte[] signature = request.getSignature().toByteArray();
+
+        try {
+
+            Sign.checkSignature(publicKey, signature, publicKey);
+
+
+        } catch (BaseException e) {
+            responseObserver.onError(e.toResponseException());
+        }
     }
 
     @Override
     public void audit(AuditRequest request, StreamObserver<AuditResponse> responseObserver) {
-        super.audit(request, responseObserver);
+        String publicKey = request.getPublicKey();
+        byte[] signature = request.getSignature().toByteArray();
+
+        try {
+
+            Sign.checkSignature(publicKey, signature, publicKey);
+
+
+        } catch (BaseException e) {
+            responseObserver.onError(e.toResponseException());
+        }
     }
 }
