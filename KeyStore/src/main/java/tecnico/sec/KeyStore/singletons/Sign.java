@@ -27,9 +27,9 @@ public class Sign {
         }
     }
 
-    public static void checkSignature(String publicKeyString , byte[] toVerifySignature, Object ... args) throws IOExceptions.IOException, SignatureExceptions.CanNotSignException, KeyExceptions.InvalidPublicKeyException, SignatureExceptions.SignatureDoNotMatchException, KeyExceptions.NoSuchAlgorithmException {
+    public static void checkSignature(byte[] publicKeyString , byte[] toVerifySignature, Object ... args) throws IOExceptions.IOException, SignatureExceptions.CanNotSignException, KeyExceptions.InvalidPublicKeyException, SignatureExceptions.SignatureDoNotMatchException, KeyExceptions.NoSuchAlgorithmException {
         try {
-            PublicKey publicKey = KeyStore.stringToPubKey(publicKeyString);
+            PublicKey publicKey = KeyStore.toPublicKey(publicKeyString);
             Signature signature = SignTools.getSignature();
             signature.initVerify(publicKey);
             byte[] toValidate = SignTools.argsToBytes(args);

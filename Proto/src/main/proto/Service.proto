@@ -3,7 +3,7 @@ option java_multiple_files = true;
 package tecnico.sec.grpc;
 
 message NonceRequest {
-  string publicKey = 1;
+  bytes publicKey = 1;
   bytes signature = 2;
 }
 
@@ -13,7 +13,7 @@ message NonceResponse {
 }
 
 message OpenAccountRequest {
-  string publicKey = 1;
+  bytes publicKey = 1;
   bytes signature = 2;
 }
 
@@ -22,8 +22,8 @@ message OpenAccountResponse {
 }
 
 message SendAmountRequest {
-  string publicKeySource = 1;
-  string publicKeyDestination = 2;
+  bytes publicKeySource = 1;
+  bytes publicKeyDestination = 2;
   int32 amount = 3;
   int32 nonce = 4;
   bytes signature = 5;
@@ -34,7 +34,7 @@ message SendAmountResponse {
   bytes signature = 2;
 }
 message ReceiveAmountRequest {
-  string publicKey = 1;
+  bytes publicKey = 1;
   int32 transactionID = 2;
   bytes signature = 4;
 }
@@ -44,7 +44,7 @@ message ReceiveAmountResponse {
   bytes signature = 2;
 }
 message CheckAccountRequest {
-  string publicKey = 1;
+  bytes publicKey = 1;
   bytes signature = 2;
 }
 
@@ -54,7 +54,7 @@ message CheckAccountResponse {
   bytes signature = 3;
 }
 message AuditRequest {
-  string publicKey = 1;
+  bytes publicKey = 1;
   bytes signature = 2;
 }
 

@@ -9,7 +9,7 @@ public class ServiceImpl extends ServiceImplBase {
 
     @Override
     public void openAccount(OpenAccountRequest request, StreamObserver<OpenAccountResponse> responseObserver) {
-        String publicKey = request.getPublicKey();
+        byte[] publicKey = request.getPublicKey().toByteArray();
         byte[] signature = request.getSignature().toByteArray();
 
         try {
@@ -26,8 +26,8 @@ public class ServiceImpl extends ServiceImplBase {
 
     @Override
     public void sendAmount(SendAmountRequest request, StreamObserver<SendAmountResponse> responseObserver) {
-        String publicKeySource = request.getPublicKeySource();
-        String publicKeyDestination = request.getPublicKeyDestination();
+        byte[] publicKeySource = request.getPublicKeySource().toByteArray();
+        byte[] publicKeyDestination = request.getPublicKeyDestination().toByteArray();
         int amount = request.getAmount();
         int nonce = request.getNonce();
         byte[] signature = request.getSignature().toByteArray();
@@ -45,7 +45,7 @@ public class ServiceImpl extends ServiceImplBase {
 
     @Override
     public void receiveAmount(ReceiveAmountRequest request, StreamObserver<ReceiveAmountResponse> responseObserver) {
-        String publicKey = request.getPublicKey();
+        byte[] publicKey = request.getPublicKey().toByteArray();
         int transactionID = request.getTransactionID();
         byte[] signature = request.getSignature().toByteArray();
 
@@ -62,7 +62,7 @@ public class ServiceImpl extends ServiceImplBase {
 
     @Override
     public void checkAccount(CheckAccountRequest request, StreamObserver<CheckAccountResponse> responseObserver) {
-        String publicKey = request.getPublicKey();
+        byte[] publicKey = request.getPublicKey().toByteArray();
         byte[] signature = request.getSignature().toByteArray();
 
         try {
@@ -77,7 +77,7 @@ public class ServiceImpl extends ServiceImplBase {
 
     @Override
     public void audit(AuditRequest request, StreamObserver<AuditResponse> responseObserver) {
-        String publicKey = request.getPublicKey();
+        byte[] publicKey = request.getPublicKey().toByteArray();
         byte[] signature = request.getSignature().toByteArray();
 
         try {
