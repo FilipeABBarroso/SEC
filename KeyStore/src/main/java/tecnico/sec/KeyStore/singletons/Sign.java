@@ -1,6 +1,5 @@
 package tecnico.sec.KeyStore.singletons;
 
-import tecnico.sec.proto.exceptions.BaseException;
 import tecnico.sec.proto.exceptions.IOExceptions;
 import tecnico.sec.proto.exceptions.KeyExceptions;
 import tecnico.sec.proto.exceptions.SignatureExceptions;

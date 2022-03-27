@@ -7,14 +7,14 @@ public abstract class SignatureExceptions extends BaseException{
     public static class SignatureDoNotMatchException extends SignatureExceptions{
         @Override
         public Exception toResponseException() {
-            return Status.PERMISSION_DENIED.withDescription("Signature Do Not Match Exception").asException();
+            return Status.PERMISSION_DENIED.withDescription("Signature Do Not Match").asException();
         }
     }
 
     public static class CanNotSignException extends SignatureExceptions{
         @Override
         public Exception toResponseException() {
-            return Status.ABORTED.withDescription("Something went wrong while signing Exception").asException();
+            return Status.ABORTED.withDescription("Something went wrong while signing").asException();
         }
     }
 }

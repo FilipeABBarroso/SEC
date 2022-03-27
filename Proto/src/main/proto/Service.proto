@@ -4,7 +4,7 @@ package tecnico.sec.grpc;
 
 message OpenAccountRequest {
   string publicKey = 1;
-  bytes signature = 3;
+  bytes signature = 2;
 }
 
 message OpenAccountResponse {
