@@ -17,22 +17,14 @@ import java.security.*;
 
 public class Client {
 
-    private final ServiceGrpc.ServiceBlockingStub stub;
-    private final PublicKey serverPubKey;
-    private int nonce = 1;
+    private static final ServiceGrpc.ServiceBlockingStub stub = ServiceGrpc.newBlockingStub(ManagedChannelBuilder
+            .forAddress("localhost",8080)
+            .usePlaintext()
+            .build());
+    private static final byte[] serverPubKey = null;
 
-    //TODO handle exceptions, update nounce, get serverpubkey
-
-    public Client(String host, int port) {
-        ManagedChannel channel = ManagedChannelBuilder.forAddress(host, port)
-                .usePlaintext()
-                .build();
-        this.stub = ServiceGrpc.newBlockingStub(channel);
-        serverPubKey = null; //TODO
-    }
-
-    public void open_account(PublicKey key) {
-        String pubKeyField = pubKeyToString(key);
+    public static void open_account(PublicKey key) {
+        byte[] pubKeyField = key.getEncoded();
         byte[] signature = null;
         try {
             signature = signMessage(pubKeyField);
@@ -43,7 +35,7 @@ public class Client {
         OpenAccountResponse openAccountResponse = null;
         try {
             openAccountResponse = stub.openAccount(OpenAccountRequest.newBuilder()
-                    .setPublicKey(pubKeyToString(key))
+                    .setPublicKey(ByteString.copyFrom(pubKeyField))
                     .setSignature(ByteString.copyFrom(signature))
                     .build());
         } catch (Exception e) {
@@ -52,7 +44,7 @@ public class Client {
             return;
         }
         try {
-            checkSignature(serverPubKey, openAccountResponse.getSignature().toByteArray());
+            checkSignature(serverPubKey, openAccountResponse.getSignature().toByteArray(),pubKeyField);
             System.out.println("Account opened!");
         } catch (BaseException e) {
             Status status = Status.fromThrowable(e);
@@ -60,9 +52,12 @@ public class Client {
         }
     }
 
-    public void send_amount(PublicKey source, PublicKey destination, int amount) {
-        String sourceField = pubKeyToString(source);
-        String destinationField = pubKeyToString(destination);
+    public static void send_amount(PublicKey source, PublicKey destination, int amount) {
+
+        int nonce = stub.getNonce(NonceRequest.newBuilder().build()).getNonce();
+
+        byte[] sourceField = source.getEncoded();
+        byte[] destinationField = destination.getEncoded();
         byte[] signature = null;
         try {
             signature = signMessage(sourceField, destinationField, amount, nonce);
@@ -74,8 +69,8 @@ public class Client {
         SendAmountResponse sendAmountResponse = null;
         try {
             sendAmountResponse = stub.sendAmount(SendAmountRequest.newBuilder()
-                    .setPublicKeySource(sourceField)
-                    .setPublicKeyDestination(destinationField)
+                    .setPublicKeySource(ByteString.copyFrom(sourceField))
+                    .setPublicKeyDestination(ByteString.copyFrom(destinationField))
                     .setAmount(amount)
                     .setNonce(nonce)
                     .setSignature(ByteString.copyFrom(signature))
@@ -86,7 +81,7 @@ public class Client {
             return;
         }
         try {
-            checkSignature(serverPubKey, sendAmountResponse.getSignature().toByteArray(), sendAmountResponse.getNonce());
+            checkSignature(serverPubKey, sendAmountResponse.getSignature().toByteArray(), sourceField,destinationField,amount,nonce+1);
             System.out.println("Amount sent!");
         } catch (BaseException e) {
             Status status = Status.fromThrowable(e);
@@ -94,8 +89,8 @@ public class Client {
         }
     }
 
-    public void receive_amount(PublicKey key, int transactionID) {
-        String pubKeyField = pubKeyToString(key);
+    public static void receive_amount(PublicKey key, int transactionID) {
+        byte[] pubKeyField = key.getEncoded();
         byte[] signature = null;
         try {
             signature = signMessage(pubKeyField, transactionID);
@@ -107,7 +102,7 @@ public class Client {
         ReceiveAmountResponse receiveAmountResponse = null;
         try {
             receiveAmountResponse = stub.receiveAmount(ReceiveAmountRequest.newBuilder()
-                    .setPublicKey(pubKeyToString(key))
+                    .setPublicKey(ByteString.copyFrom(pubKeyField))
                     .setTransactionID(transactionID)
                     .setSignature(ByteString.copyFrom(signature))
                     .build());
@@ -117,7 +112,7 @@ public class Client {
             return;
         }
         try {
-            checkSignature(serverPubKey, receiveAmountResponse.getSignature().toByteArray(), receiveAmountResponse.getNonce());
+            checkSignature(serverPubKey, receiveAmountResponse.getSignature().toByteArray(), pubKeyField,transactionID);
             System.out.println("Amount received!");
         } catch (BaseException e) {
             Status status = Status.fromThrowable(e);
@@ -125,30 +120,20 @@ public class Client {
         }
     }
 
-    public void check_account(PublicKey key) {
-        String pubKeyField = pubKeyToString(key);
-        byte[] signature = null;
-        try {
-            signature = signMessage(pubKeyField);
-        } catch (BaseException e) {
-            System.out.println(e.toResponseException().getMessage());
-            return;
-        }
-
+    public static void check_account(PublicKey key) {
         CheckAccountResponse checkAccountResponse = null;
         try {
             checkAccountResponse = stub.checkAccount(CheckAccountRequest.newBuilder()
-                    .setPublicKey(pubKeyToString(key))
-                    .setSignature(ByteString.copyFrom(signature))
+                    .setPublicKey(ByteString.copyFrom(key.getEncoded()))
                     .build());
-            System.out.println("Balance: " + checkAccountResponse.getBalance());
         } catch (Exception e) {
             Status status = Status.fromThrowable(e);
             System.out.println("SERVER ERROR : " + status.getCode() + " : " + status.getDescription());
             return;
         }
         try {
-            checkSignature(serverPubKey, checkAccountResponse.getSignature().toByteArray(), checkAccountResponse.getBalance(), checkAccountResponse.getTransactionsList()); //TODO falta nonce
+            checkSignature(serverPubKey, checkAccountResponse.getSignature().toByteArray(), checkAccountResponse.getBalance(), checkAccountResponse.getTransactionsList());
+            System.out.println("Balance: " + checkAccountResponse.getBalance());
             listTransactions(checkAccountResponse.getTransactionsList());
         } catch (BaseException e) {
             Status status = Status.fromThrowable(e);
@@ -156,11 +141,11 @@ public class Client {
         }
     }
 
-    public void audit(PublicKey key) {
+    public static void audit(PublicKey key) {
         AuditResponse auditResponse = null;
         try {
             auditResponse = stub.audit(AuditRequest.newBuilder()
-                    .setPublicKey(pubKeyToString(key))
+                    .setPublicKey(ByteString.copyFrom(key.getEncoded()))
                     .build());
         } catch (Exception e) {
             Status status = Status.fromThrowable(e);

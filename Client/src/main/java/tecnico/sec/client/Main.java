@@ -19,8 +19,6 @@ public class Main {
 
     public static void main(String[] args) throws NoSuchAlgorithmException {
         System.out.println("Welcome to BFTB!\n");
-        Client client = new Client("localhost",8080);
-
         try {
             getCredentials();
         } catch (KeyExceptions.NoSuchAlgorithmException e) {
@@ -40,19 +38,19 @@ public class Main {
             int selected = in.nextInt();
             switch (selected) {
                 case 0 -> {
-                    client.open_account(KeyStore.getPublicKey());
+                    Client.open_account(KeyStore.getPublicKey());
                 }
                 case 1 -> {
-                    send_amount_request(client, KeyStore.getPublicKey());
+                    send_amount_request(KeyStore.getPublicKey());
                 }
                 case 2 -> {
-                    client.check_account(KeyStore.getPublicKey());
+                    Client.check_account(KeyStore.getPublicKey());
                 }
                 case 3 -> {
-                    receive_amount_request(client, KeyStore.getPublicKey());
+                    receive_amount_request(KeyStore.getPublicKey());
                 }
                 case 4 -> {
-                    client.audit(KeyStore.getPublicKey());
+                    Client.audit(KeyStore.getPublicKey());
                 }
                 default -> {
                     System.out.println("Goodbye!");
@@ -73,7 +71,7 @@ public class Main {
         return Base64.getEncoder().encodeToString(pubKey.getEncoded());
     }
 
-    public static void send_amount_request(Client client, PublicKey pubKey){
+    public static void send_amount_request(PublicKey pubKey){
         Scanner in = new Scanner(System.in);
         System.out.println("Send to who?");
         String destination = in.nextLine();
@@ -87,13 +85,13 @@ public class Main {
         System.out.println("How much you want to send?");
         int amount = in.nextInt();
 
-        client.send_amount(pubKey, destinationPubKey, amount);
+        Client.send_amount(pubKey, destinationPubKey, amount);
     }
 
-    public static void receive_amount_request(Client client, PublicKey pubKey) {
+    public static void receive_amount_request(PublicKey pubKey) {
         Scanner in = new Scanner(System.in);
         System.out.println("What transactionID you want to receive?");
         int transactionID = in.nextInt();
-        client.receive_amount(pubKey, transactionID);
+        Client.receive_amount(pubKey, transactionID);
     }
 }
