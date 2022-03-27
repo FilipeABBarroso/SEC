@@ -8,6 +8,11 @@ import tecnico.sec.proto.exceptions.BaseException;
 public class ServiceImpl extends ServiceImplBase {
 
     @Override
+    public void getNonce(NonceRequest request, StreamObserver<NonceResponse> responseObserver) {
+
+    }
+
+    @Override
     public void openAccount(OpenAccountRequest request, StreamObserver<OpenAccountResponse> responseObserver) {
         byte[] publicKey = request.getPublicKey().toByteArray();
         byte[] signature = request.getSignature().toByteArray();
@@ -63,30 +68,13 @@ public class ServiceImpl extends ServiceImplBase {
     @Override
     public void checkAccount(CheckAccountRequest request, StreamObserver<CheckAccountResponse> responseObserver) {
         byte[] publicKey = request.getPublicKey().toByteArray();
-        byte[] signature = request.getSignature().toByteArray();
-
-        try {
-
-            Sign.checkSignature(publicKey, signature, publicKey);
 
 
-        } catch (BaseException e) {
-            responseObserver.onError(e.toResponseException());
-        }
     }
 
     @Override
     public void audit(AuditRequest request, StreamObserver<AuditResponse> responseObserver) {
         byte[] publicKey = request.getPublicKey().toByteArray();
-        byte[] signature = request.getSignature().toByteArray();
 
-        try {
-
-            Sign.checkSignature(publicKey, signature, publicKey);
-
-
-        } catch (BaseException e) {
-            responseObserver.onError(e.toResponseException());
-        }
     }
 }
