@@ -2,6 +2,16 @@ syntax = "proto3";
 option java_multiple_files = true;
 package tecnico.sec.grpc;
 
+message NonceRequest {
+  string publicKey = 1;
+  bytes signature = 2;
+}
+
+message NonceResponse {
+  int32 nonce = 1;
+  bytes signature = 2;
+}
+
 message OpenAccountRequest {
   string publicKey = 1;
   bytes signature = 2;
@@ -54,6 +64,7 @@ message AuditResponse {
 }
 
 service Service {
+  rpc getNonce(NonceRequest) returns (NonceResponse);
   rpc openAccount(OpenAccountRequest) returns (OpenAccountResponse);
   rpc sendAmount(SendAmountRequest) returns (SendAmountResponse);
   rpc receiveAmount(ReceiveAmountRequest) returns (ReceiveAmountResponse);
