@@ -1,31 +1,27 @@
 package tecnico.sec.client;
 
-import java.security.KeyFactory;
-import java.security.KeyPair;
+
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
-import java.util.Base64;
+
 import java.util.Scanner;
 
 import tecnico.sec.KeyStore.singletons.KeyStore;
-import tecnico.sec.client.Client.*;
-import tecnico.sec.proto.exceptions.KeyExceptions;
 
-import static tecnico.sec.KeyStore.singletons.KeyStore.getCredentials;
+import tecnico.sec.proto.exceptions.KeyExceptions;
 
 public class Main {
 
-    public static void main(String[] args) throws NoSuchAlgorithmException {
+    public static void main(String[] args) {
         System.out.println("Welcome to BFTB!\n");
         try {
-            getCredentials();
+            KeyStore.getCredentials();
         } catch (KeyExceptions.NoSuchAlgorithmException e) {
             System.out.println("Error trying to get credentials...");
             return;
         }
-        while(true){
+        while (true) {
             Scanner in = new Scanner(System.in);
             System.out.println("""
                     Select what you want to do:
@@ -37,21 +33,11 @@ public class Main {
                     5.Leave""");
             int selected = in.nextInt();
             switch (selected) {
-                case 0 -> {
-                    Client.open_account(KeyStore.getPublicKey());
-                }
-                case 1 -> {
-                    send_amount_request(KeyStore.getPublicKey());
-                }
-                case 2 -> {
-                    Client.check_account(KeyStore.getPublicKey());
-                }
-                case 3 -> {
-                    receive_amount_request(KeyStore.getPublicKey());
-                }
-                case 4 -> {
-                    Client.audit(KeyStore.getPublicKey());
-                }
+                case 0 -> Client.open_account(KeyStore.getPublicKey());
+                case 1 -> send_amount_request(KeyStore.getPublicKey());
+                case 2 -> Client.check_account(KeyStore.getPublicKey());
+                case 3 -> receive_amount_request(KeyStore.getPublicKey());
+                case 4 -> Client.audit(KeyStore.getPublicKey());
                 default -> {
                     System.out.println("Goodbye!");
                     return;
@@ -60,24 +46,13 @@ public class Main {
         }
     }
 
-    public static PublicKey stringToPubKey(String pubKeyString) throws NoSuchAlgorithmException, InvalidKeySpecException {
-        byte[] publicBytes = Base64.getDecoder().decode(pubKeyString);
-        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        return keyFactory.generatePublic(keySpec);
-    }
-
-    public static String pubKeyToString(PublicKey pubKey) {
-        return Base64.getEncoder().encodeToString(pubKey.getEncoded());
-    }
-
-    public static void send_amount_request(PublicKey pubKey){
+    public static void send_amount_request(PublicKey pubKey) {
         Scanner in = new Scanner(System.in);
         System.out.println("Send to who?");
         String destination = in.nextLine();
-        PublicKey destinationPubKey = null;
+        PublicKey destinationPubKey;
         try {
-            destinationPubKey = stringToPubKey(destination);
+            destinationPubKey = KeyStore.stringToPublicKey(destination);
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             System.out.println("Public key not valid!");
             return;

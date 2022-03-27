@@ -2,8 +2,7 @@ package tecnico.sec.client;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.ProtocolStringList;
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
+
 import io.grpc.Status;
 
 import tecnico.sec.grpc.*;
@@ -11,30 +10,25 @@ import tecnico.sec.proto.exceptions.BaseException;
 
 import static tecnico.sec.KeyStore.singletons.Sign.checkSignature;
 import static tecnico.sec.KeyStore.singletons.Sign.signMessage;
-import static tecnico.sec.client.Main.pubKeyToString;
 
 import java.security.*;
 
 public class Client {
 
-    private static final ServiceGrpc.ServiceBlockingStub stub = ServiceGrpc.newBlockingStub(ManagedChannelBuilder
-            .forAddress("localhost",8080)
-            .usePlaintext()
-            .build());
     private static final byte[] serverPubKey = null;
 
     public static void open_account(PublicKey key) {
         byte[] pubKeyField = key.getEncoded();
-        byte[] signature = null;
+        byte[] signature;
         try {
             signature = signMessage(pubKeyField);
         } catch (BaseException e) {
             System.out.println(e.toResponseException().getMessage());
             return;
         }
-        OpenAccountResponse openAccountResponse = null;
+        OpenAccountResponse openAccountResponse;
         try {
-            openAccountResponse = stub.openAccount(OpenAccountRequest.newBuilder()
+            openAccountResponse = ServerConnection.getConnection().openAccount(OpenAccountRequest.newBuilder()
                     .setPublicKey(ByteString.copyFrom(pubKeyField))
                     .setSignature(ByteString.copyFrom(signature))
                     .build());
@@ -54,11 +48,11 @@ public class Client {
 
     public static void send_amount(PublicKey source, PublicKey destination, int amount) {
 
-        int nonce = stub.getNonce(NonceRequest.newBuilder().build()).getNonce();
+        int nonce = ServerConnection.getConnection().getNonce(NonceRequest.newBuilder().build()).getNonce();
 
         byte[] sourceField = source.getEncoded();
         byte[] destinationField = destination.getEncoded();
-        byte[] signature = null;
+        byte[] signature;
         try {
             signature = signMessage(sourceField, destinationField, amount, nonce);
         } catch (BaseException e) {
@@ -66,9 +60,9 @@ public class Client {
             return;
         }
 
-        SendAmountResponse sendAmountResponse = null;
+        SendAmountResponse sendAmountResponse;
         try {
-            sendAmountResponse = stub.sendAmount(SendAmountRequest.newBuilder()
+            sendAmountResponse = ServerConnection.getConnection().sendAmount(SendAmountRequest.newBuilder()
                     .setPublicKeySource(ByteString.copyFrom(sourceField))
                     .setPublicKeyDestination(ByteString.copyFrom(destinationField))
                     .setAmount(amount)
@@ -91,7 +85,7 @@ public class Client {
 
     public static void receive_amount(PublicKey key, int transactionID) {
         byte[] pubKeyField = key.getEncoded();
-        byte[] signature = null;
+        byte[] signature;
         try {
             signature = signMessage(pubKeyField, transactionID);
         } catch (BaseException e) {
@@ -99,9 +93,9 @@ public class Client {
             return;
         }
 
-        ReceiveAmountResponse receiveAmountResponse = null;
+        ReceiveAmountResponse receiveAmountResponse;
         try {
-            receiveAmountResponse = stub.receiveAmount(ReceiveAmountRequest.newBuilder()
+            receiveAmountResponse = ServerConnection.getConnection().receiveAmount(ReceiveAmountRequest.newBuilder()
                     .setPublicKey(ByteString.copyFrom(pubKeyField))
                     .setTransactionID(transactionID)
                     .setSignature(ByteString.copyFrom(signature))
@@ -121,9 +115,9 @@ public class Client {
     }
 
     public static void check_account(PublicKey key) {
-        CheckAccountResponse checkAccountResponse = null;
+        CheckAccountResponse checkAccountResponse;
         try {
-            checkAccountResponse = stub.checkAccount(CheckAccountRequest.newBuilder()
+            checkAccountResponse = ServerConnection.getConnection().checkAccount(CheckAccountRequest.newBuilder()
                     .setPublicKey(ByteString.copyFrom(key.getEncoded()))
                     .build());
         } catch (Exception e) {
@@ -142,9 +136,9 @@ public class Client {
     }
 
     public static void audit(PublicKey key) {
-        AuditResponse auditResponse = null;
+        AuditResponse auditResponse;
         try {
-            auditResponse = stub.audit(AuditRequest.newBuilder()
+            auditResponse = ServerConnection.getConnection().audit(AuditRequest.newBuilder()
                     .setPublicKey(ByteString.copyFrom(key.getEncoded()))
                     .build());
         } catch (Exception e) {
