@@ -38,10 +38,9 @@ public class KeyStore {
         return credentials.getPrivate();
     }
 
-    public static PublicKey stringToPubKey(String pubKeyString) throws KeyExceptions.InvalidPublicKeyException, KeyExceptions.NoSuchAlgorithmException {
+    public static PublicKey toPublicKey(byte[] publicKey) throws KeyExceptions.InvalidPublicKeyException, KeyExceptions.NoSuchAlgorithmException{
         try {
-            byte[] publicBytes = Base64.getDecoder().decode(pubKeyString);
-            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicKey);
             KeyFactory keyFactory = KeyTools.getKeyFactory();
             return keyFactory.generatePublic(keySpec);
         } catch (InvalidKeySpecException e) {
