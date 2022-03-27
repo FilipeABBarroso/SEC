@@ -1,7 +1,9 @@
+package dbController;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 
-public class PostgreSQLJDBC {
+public class DBConnection {
     private static Connection connection;
 
     private static void initConnection() {
