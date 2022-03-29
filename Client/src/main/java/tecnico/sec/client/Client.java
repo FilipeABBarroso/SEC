@@ -5,6 +5,8 @@ import com.google.protobuf.ProtocolStringList;
 
 import io.grpc.Status;
 
+import org.javatuples.Pair;
+import org.javatuples.Tuple;
 import tecnico.sec.grpc.*;
 import tecnico.sec.proto.exceptions.BaseException;
 
@@ -17,14 +19,14 @@ public class Client {
 
     private static final byte[] serverPubKey = null;
 
-    public static void open_account(PublicKey key) {
+    public static boolean open_account(PublicKey key) {
         byte[] pubKeyField = key.getEncoded();
         byte[] signature;
         try {
             signature = signMessage(pubKeyField);
         } catch (BaseException e) {
             System.out.println(e.toResponseException().getMessage());
-            return;
+            return false;
         }
         OpenAccountResponse openAccountResponse;
         try {
@@ -35,18 +37,19 @@ public class Client {
         } catch (Exception e) {
             Status status = Status.fromThrowable(e);
             System.out.println("SERVER ERROR : " + status.getCode() + " : " + status.getDescription());
-            return;
+            return false;
         }
         try {
             checkSignature(serverPubKey, openAccountResponse.getSignature().toByteArray(),pubKeyField);
-            System.out.println("Account opened!");
+            return true;
         } catch (BaseException e) {
             Status status = Status.fromThrowable(e);
             System.out.println("CLIENT ERROR : " + status.getCode() + " : " + status.getDescription());
         }
+        return false;
     }
 
-    public static void send_amount(PublicKey source, PublicKey destination, int amount) {
+    public static boolean send_amount(PublicKey source, PublicKey destination, int amount) {
 
         int nonce = ServerConnection.getConnection().getNonce(NonceRequest.newBuilder().build()).getNonce();
 
@@ -57,7 +60,7 @@ public class Client {
             signature = signMessage(sourceField, destinationField, amount, nonce);
         } catch (BaseException e) {
             System.out.println(e.toResponseException().getMessage());
-            return;
+            return false;
         }
 
         SendAmountResponse sendAmountResponse;
@@ -72,25 +75,26 @@ public class Client {
         } catch (Exception e) {
             Status status = Status.fromThrowable(e);
             System.out.println("SERVER ERROR : " + status.getCode() + " : " + status.getDescription());
-            return;
+            return false;
         }
         try {
             checkSignature(serverPubKey, sendAmountResponse.getSignature().toByteArray(), sourceField,destinationField,amount,nonce+1);
-            System.out.println("Amount sent!");
+            return true;
         } catch (BaseException e) {
             Status status = Status.fromThrowable(e);
             System.out.println("CLIENT ERROR : " + status.getCode() + " : " + status.getDescription());
         }
+        return false;
     }
 
-    public static void receive_amount(PublicKey key, int transactionID) {
+    public static boolean receive_amount(PublicKey key, int transactionID) {
         byte[] pubKeyField = key.getEncoded();
         byte[] signature;
         try {
             signature = signMessage(pubKeyField, transactionID);
         } catch (BaseException e) {
             System.out.println(e.toResponseException().getMessage());
-            return;
+            return false;
         }
 
         ReceiveAmountResponse receiveAmountResponse;
@@ -103,18 +107,19 @@ public class Client {
         } catch (Exception e) {
             Status status = Status.fromThrowable(e);
             System.out.println("SERVER ERROR : " + status.getCode() + " : " + status.getDescription());
-            return;
+            return false;
         }
         try {
             checkSignature(serverPubKey, receiveAmountResponse.getSignature().toByteArray(), pubKeyField,transactionID);
-            System.out.println("Amount received!");
+            return true;
         } catch (BaseException e) {
             Status status = Status.fromThrowable(e);
             System.out.println("CLIENT ERROR : " + status.getCode() + " : " + status.getDescription());
         }
+        return false;
     }
 
-    public static void check_account(PublicKey key) {
+    public static Pair<Integer,ProtocolStringList> check_account(PublicKey key) {
         CheckAccountResponse checkAccountResponse;
         try {
             checkAccountResponse = ServerConnection.getConnection().checkAccount(CheckAccountRequest.newBuilder()
@@ -123,19 +128,19 @@ public class Client {
         } catch (Exception e) {
             Status status = Status.fromThrowable(e);
             System.out.println("SERVER ERROR : " + status.getCode() + " : " + status.getDescription());
-            return;
+            return null;
         }
         try {
             checkSignature(serverPubKey, checkAccountResponse.getSignature().toByteArray(), checkAccountResponse.getBalance(), checkAccountResponse.getTransactionsList());
-            System.out.println("Balance: " + checkAccountResponse.getBalance());
-            listTransactions(checkAccountResponse.getTransactionsList());
+            return Pair.with(checkAccountResponse.getBalance(),checkAccountResponse.getTransactionsList());
         } catch (BaseException e) {
             Status status = Status.fromThrowable(e);
             System.out.println("CLIENT ERROR : " + status.getCode() + " : " + status.getDescription());
         }
+        return null;
     }
 
-    public static void audit(PublicKey key) {
+    public static ProtocolStringList audit(PublicKey key) {
         AuditResponse auditResponse;
         try {
             auditResponse = ServerConnection.getConnection().audit(AuditRequest.newBuilder()
@@ -144,19 +149,16 @@ public class Client {
         } catch (Exception e) {
             Status status = Status.fromThrowable(e);
             System.out.println("SERVER ERROR : " + status.getCode() + " : " + status.getDescription());
-            return;
+            return null;
         }
         try {
             checkSignature(serverPubKey, auditResponse.getSignature().toByteArray(), auditResponse.getTransactionsList());
-            listTransactions(auditResponse.getTransactionsList());
+            return auditResponse.getTransactionsList();
         } catch (BaseException e) {
             Status status = Status.fromThrowable(e);
             System.out.println("CLIENT ERROR : " + status.getCode() + " : " + status.getDescription());
         }
-    }
-
-    private static void listTransactions(ProtocolStringList transactions) {
-        transactions.forEach(System.out::println);
+        return null;
     }
 
 
