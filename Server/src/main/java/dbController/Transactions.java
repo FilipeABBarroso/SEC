@@ -96,8 +96,8 @@ public class Transactions {
         }
     }
 
-    public static List<Transaction> getPendingTransactions(byte[] publicKey) throws TransactionsExceptions.ReceiverPublicKeyNotFoundException {
-        ArrayList<Transaction> list = new ArrayList<>();
+    public static List<String> getPendingTransactions(byte[] publicKey) throws TransactionsExceptions.ReceiverPublicKeyNotFoundException {
+        ArrayList<String> list = new ArrayList<>();
         try {
             Connection conn = DBConnection.getConnection();
             String query = "SELECT * FROM TRANSACTIONS WHERE publicKeyReceiver=? AND status=?;";
@@ -111,7 +111,30 @@ public class Transactions {
             while (!rs.next()) {
                 Transaction t = new Transaction(rs.getBytes("publicKeySender"), rs.getBytes("publicKeySender"),
                         rs.getInt("amount"), rs.getInt("id"));
-                list.add(t);
+                list.add(t.toString());
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    public static List<String> getTransactions(byte[] publicKey) throws TransactionsExceptions.ReceiverPublicKeyNotFoundException, TransactionsExceptions.PublicKeyNotFoundException {
+        ArrayList<String> list = new ArrayList<>();
+        try {
+            Connection conn = DBConnection.getConnection();
+            String query = "SELECT * FROM TRANSACTIONS WHERE publicKeyReceiver=? or publicKeySender=?;";
+            PreparedStatement ps = conn.prepareStatement(query);
+            ps.setBytes(1, publicKey);
+            ps.setBytes(2, publicKey);
+            ResultSet rs = ps.executeQuery();
+            if (!rs.next()) {
+                throw new TransactionsExceptions.PublicKeyNotFoundException();
+            }
+            while (!rs.next()) {
+                Transaction t = new Transaction(rs.getBytes("publicKeySender"), rs.getBytes("publicKeySender"),
+                        rs.getInt("amount"), rs.getInt("id"));
+                list.add(t.toString());
             }
         } catch (SQLException e) {
             e.printStackTrace();

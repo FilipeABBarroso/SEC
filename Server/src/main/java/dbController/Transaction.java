@@ -1,5 +1,7 @@
 package dbController;
 
+import java.util.Arrays;
+
 public class Transaction {
     byte[] publicKeySender;
     byte[] getPublicKeyReceiver;
@@ -27,5 +29,11 @@ public class Transaction {
 
     public int getId() {
         return id;
+    }
+
+    @Override
+    public String toString() {
+        return "[" + id + "]" + " amount: " + amount + ", From: " +
+                Arrays.toString(publicKeySender) + " -> To: " + Arrays.toString(getPublicKeyReceiver);
     }
 }
