@@ -2,13 +2,11 @@ package tecnico.sec.server;
 import com.google.protobuf.ByteString;
 import dbController.Balance;
 import dbController.Nonce;
-import dbController.Transaction;
 import dbController.Transactions;
 import io.grpc.stub.StreamObserver;
 import tecnico.sec.KeyStore.singletons.Sign;
 import tecnico.sec.grpc.*;
 import tecnico.sec.grpc.ServiceGrpc.ServiceImplBase;
-import tecnico.sec.proto.exceptions.BalanceExceptions;
 import tecnico.sec.proto.exceptions.BaseException;
 import tecnico.sec.proto.exceptions.NonceExceptions;
 
@@ -89,14 +87,14 @@ public class ServiceImpl extends ServiceImplBase {
 
         try {
             int balance = Balance.getBalance(publicKey);
-            List<Transaction> transactions = Transactions.getPendingTransactions(publicKey);
+            List<String> transactions = Transactions.getPendingTransactions(publicKey);
 
             byte[] signedFields = Sign.signMessage(balance , transactions);
             CheckAccountResponse.Builder builder = CheckAccountResponse.newBuilder();
             builder.setSignature(ByteString.copyFrom(signedFields));
             int count = 0;
-            for(Transaction t : transactions){
-                builder.setTransactions(count , t.toString());
+            for(String t : transactions){
+                builder.setTransactions(count , t);
                 count++;
             }
             responseObserver.onNext(builder.build());
@@ -113,14 +111,14 @@ public class ServiceImpl extends ServiceImplBase {
 
         try {
             int balance = Balance.getBalance(publicKey);
-            List<Transaction> transactions = Transactions.getPendingTransactions(publicKey);
+            List<String> transactions = Transactions.getTransactions(publicKey);
 
             byte[] signedFields = Sign.signMessage(balance , transactions);
             AuditResponse.Builder builder = AuditResponse.newBuilder();
             builder.setSignature(ByteString.copyFrom(signedFields));
             int count = 0;
-            for(Transaction t : transactions){
-                builder.setTransactions(count , t.toString());
+            for(String t : transactions){
+                builder.setTransactions(count , t);
                 count++;
             }
             responseObserver.onNext(builder.build());
