@@ -6,7 +6,6 @@ import com.google.protobuf.ProtocolStringList;
 import io.grpc.Status;
 
 import org.javatuples.Pair;
-import org.javatuples.Tuple;
 import tecnico.sec.grpc.*;
 import tecnico.sec.proto.exceptions.BaseException;
 
