@@ -27,7 +27,7 @@ public class Nonce {
         return out;
     }
 
-    public static void creatNonce(byte[] publicKey, int nonce) {
+    public static void createNonce(byte[] publicKey, int nonce) {
         try {
             Connection conn = DBConnection.getConnection();
             String query = "INSERT INTO NONCE (publicKey,nonce) " + "VALUES (?,?);";
