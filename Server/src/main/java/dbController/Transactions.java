@@ -118,4 +118,27 @@ public class Transactions {
         }
         return list;
     }
+
+    public static List<Transaction> getTransactions(byte[] publicKey) throws TransactionsExceptions.ReceiverPublicKeyNotFoundException, TransactionsExceptions.PublicKeyNotFoundException {
+        ArrayList<Transaction> list = new ArrayList<>();
+        try {
+            Connection conn = DBConnection.getConnection();
+            String query = "SELECT * FROM TRANSACTIONS WHERE publicKeyReceiver=? or publicKeySender=?;";
+            PreparedStatement ps = conn.prepareStatement(query);
+            ps.setBytes(1, publicKey);
+            ps.setBytes(2, publicKey);
+            ResultSet rs = ps.executeQuery();
+            if (!rs.next()) {
+                throw new TransactionsExceptions.PublicKeyNotFoundException();
+            }
+            while (!rs.next()) {
+                Transaction t = new Transaction(rs.getBytes("publicKeySender"), rs.getBytes("publicKeySender"),
+                        rs.getInt("amount"), rs.getInt("id"));
+                list.add(t);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
 }
