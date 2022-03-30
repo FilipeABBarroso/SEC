@@ -20,13 +20,20 @@ public abstract class TransactionsExceptions extends BaseException {
 
     public static class FailInsertTransactionException extends TransactionsExceptions {
         @Override
-        public Exception toResponseException() {return Status.NOT_FOUND.asException();}
+        public Exception toResponseException() {return Status.NOT_FOUND.withDescription("Transaction id not found").asException();}
     }
 
     public static class TransactionIDNotFoundException extends TransactionsExceptions {
         @Override
         public Exception toResponseException() {
-            return Status.NOT_FOUND.asException();
+            return Status.NOT_FOUND.withDescription("Transaction id not found").asException();
+        }
+    }
+
+    public static class TransactionPublicKeyReceiverDontMatchException extends TransactionsExceptions {
+        @Override
+        public Exception toResponseException() {
+            return Status.INVALID_ARGUMENT.withDescription("Receiver public key don't match").asException();
         }
     }
 }

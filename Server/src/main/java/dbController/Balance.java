@@ -28,7 +28,7 @@ public class Balance {
         return balance;
     }
 
-    public static void createUser(byte[] publicKey) throws BalanceExceptions.PublicKeyAlreadyExistException {
+    public static void openAccount(byte[] publicKey) throws BalanceExceptions.PublicKeyAlreadyExistException {
         try {
             int initialBalance = 1000;
             Connection conn = DBConnection.getConnection();

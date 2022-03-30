@@ -54,7 +54,7 @@ public class Transactions {
         }
     }
 
-    public static void changeStatus(int id) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.SenderPublicKeyNotFoundException, TransactionsExceptions.TransactionIDNotFoundException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException {
+    public static void changeStatus(int id, byte[] publicKeyReceiver) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.TransactionIDNotFoundException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, TransactionsExceptions.TransactionPublicKeyReceiverDontMatchException {
         try {
             // get receiver public key and amount in the transaction
             Connection conn = DBConnection.getConnection();
@@ -63,13 +63,16 @@ public class Transactions {
             pkAndAmountPs.setInt(1, id);
             ResultSet pkAndAmountRs = pkAndAmountPs.executeQuery();
             if (!pkAndAmountRs.next()) {
-                throw new NonceExceptions.NonceNotFoundException();
+                throw new TransactionsExceptions.TransactionIDNotFoundException();
+            }
+            if (publicKeyReceiver != pkAndAmountRs.getBytes("publicKeyReceiver")) {
+                throw new TransactionsExceptions.TransactionPublicKeyReceiverDontMatchException();
             }
 
             conn.setAutoCommit(false);
 
             // change transaction status to completed
-            String query = "UPDATE TRANSACTIONS set completed = ? where id=?;";
+            String query = "UPDATE TRANSACTIONS set status = ? where id=?;";
             PreparedStatement ps = conn.prepareStatement(query);
             ps.setString(1, "Completed");
             ps.setInt(2, id);
