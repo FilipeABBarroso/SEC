@@ -50,9 +50,10 @@ public class Client {
 
     public static boolean send_amount(PublicKey source, PublicKey destination, int amount) {
 
-        int nonce = ServerConnection.getConnection().getNonce(NonceRequest.newBuilder().build()).getNonce();
-
         byte[] sourceField = source.getEncoded();
+
+        int nonce = ServerConnection.getConnection().getNonce(NonceRequest.newBuilder().setPublicKey(ByteString.copyFrom(sourceField)).build()).getNonce();
+
         byte[] destinationField = destination.getEncoded();
         byte[] signature;
         try {
