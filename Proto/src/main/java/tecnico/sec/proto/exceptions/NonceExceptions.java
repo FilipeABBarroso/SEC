@@ -7,7 +7,7 @@ public abstract class NonceExceptions extends BaseException{
     public static class NonceNotFoundException extends NonceExceptions {
         @Override
         public Exception toResponseException() {
-            return Status.NOT_FOUND.asException();
+            return Status.NOT_FOUND.withDescription("Nonce not found").asException();
         }
     }
 }
