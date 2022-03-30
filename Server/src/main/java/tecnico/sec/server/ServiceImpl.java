@@ -1,5 +1,6 @@
 package tecnico.sec.server;
 import com.google.protobuf.ByteString;
+import dbController.Nonce;
 import io.grpc.stub.StreamObserver;
 import tecnico.sec.KeyStore.singletons.Sign;
 import tecnico.sec.grpc.*;
@@ -14,6 +15,9 @@ public class ServiceImpl extends ServiceImplBase {
     public void getNonce(NonceRequest request, StreamObserver<NonceResponse> responseObserver) {
         SecureRandom random = new SecureRandom();
         int nonce = random.nextInt();
+
+        Nonce.creatNonce(request.getPublicKey().toByteArray() , nonce);
+
         responseObserver.onNext(NonceResponse.newBuilder().setNonce(nonce).build());
         responseObserver.onCompleted();
     }
