@@ -8,10 +8,12 @@ import io.grpc.stub.StreamObserver;
 import tecnico.sec.KeyStore.singletons.Sign;
 import tecnico.sec.grpc.*;
 import tecnico.sec.grpc.ServiceGrpc.ServiceImplBase;
+import tecnico.sec.proto.exceptions.BalanceExceptions;
 import tecnico.sec.proto.exceptions.BaseException;
 import tecnico.sec.proto.exceptions.NonceExceptions;
 
 import java.security.SecureRandom;
+import java.util.List;
 
 public class ServiceImpl extends ServiceImplBase {
 
@@ -24,7 +26,7 @@ public class ServiceImpl extends ServiceImplBase {
         } catch (NonceExceptions.NonceNotFoundException e) {
             SecureRandom random = new SecureRandom();
             nonce = random.nextInt();
-            Nonce.creatNonce(publicKey , nonce);
+            Nonce.createNonce(publicKey , nonce);
         }
         responseObserver.onNext(NonceResponse.newBuilder().setNonce(nonce).build());
         responseObserver.onCompleted();
@@ -36,7 +38,7 @@ public class ServiceImpl extends ServiceImplBase {
         byte[] signature = request.getSignature().toByteArray();
         try {
             Sign.checkSignature(publicKey, signature, publicKey);
-            Balance.creatUser(publicKey);
+            Balance.openAccount(publicKey);
             byte[] signedPublicKey = Sign.signMessage(publicKey);
             responseObserver.onNext(OpenAccountResponse.newBuilder().setSignature(ByteString.copyFrom(signedPublicKey)).build());
         } catch (BaseException e) {
@@ -72,7 +74,7 @@ public class ServiceImpl extends ServiceImplBase {
 
         try {
             Sign.checkSignature(publicKey, signature, publicKey);
-            //Transactions.changeStatus(transactionID , publicKey);
+            Transactions.changeStatus(transactionID , publicKey);
             byte[] signedFields = Sign.signMessage(publicKey , transactionID);
             responseObserver.onNext(ReceiveAmountResponse.newBuilder().setSignature(ByteString.copyFrom(signedFields)).build());
         } catch (BaseException e) {
@@ -85,12 +87,47 @@ public class ServiceImpl extends ServiceImplBase {
     public void checkAccount(CheckAccountRequest request, StreamObserver<CheckAccountResponse> responseObserver) {
         byte[] publicKey = request.getPublicKey().toByteArray();
 
+        try {
+            int balance = Balance.getBalance(publicKey);
+            List<Transaction> transactions = Transactions.getPendingTransactions(publicKey);
+
+            byte[] signedFields = Sign.signMessage(balance , transactions);
+            CheckAccountResponse.Builder builder = CheckAccountResponse.newBuilder();
+            builder.setSignature(ByteString.copyFrom(signedFields));
+            int count = 0;
+            for(Transaction t : transactions){
+                builder.setTransactions(count , t.toString());
+                count++;
+            }
+            responseObserver.onNext(builder.build());
+        } catch (BaseException e) {
+            responseObserver.onError(e.toResponseException());
+        }
+
         responseObserver.onCompleted();
     }
 
     @Override
     public void audit(AuditRequest request, StreamObserver<AuditResponse> responseObserver) {
         byte[] publicKey = request.getPublicKey().toByteArray();
+
+        try {
+            int balance = Balance.getBalance(publicKey);
+            List<Transaction> transactions = Transactions.getPendingTransactions(publicKey);
+
+            byte[] signedFields = Sign.signMessage(balance , transactions);
+            AuditResponse.Builder builder = AuditResponse.newBuilder();
+            builder.setSignature(ByteString.copyFrom(signedFields));
+            int count = 0;
+            for(Transaction t : transactions){
+                builder.setTransactions(count , t.toString());
+                count++;
+            }
+            responseObserver.onNext(builder.build());
+        } catch (BaseException e) {
+            responseObserver.onError(e.toResponseException());
+        }
+
         responseObserver.onCompleted();
     }
 }
