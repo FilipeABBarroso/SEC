@@ -8,15 +8,19 @@ CREATE TABLE IF NOT EXISTS Balance(
     balance integer
 );
 
+CREATE TABLE IF NOT EXISTS Nonce(
+    publicKey bytea PRIMARY KEY,
+    nonce integer
+);
+
 CREATE TABLE IF NOT EXISTS Transactions(
-    publicSender bytea,
-    publicReceiver bytea,
+    publicKeySender bytea,
+    publicKeyReceiver bytea,
     amount integer,
     status statusOptions NOT NULL,
     id serial PRIMARY KEY,
-    nonce integer,
-    FOREIGN KEY (publicSender)
+    FOREIGN KEY (publicKeySender)
         REFERENCES Balance (publicKey),
-    FOREIGN KEY (publicReceiver)
+    FOREIGN KEY (publicKeyReceiver)
         REFERENCES Balance (publicKey)
 );
