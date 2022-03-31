@@ -10,7 +10,9 @@ CREATE TABLE IF NOT EXISTS Balance(
 
 CREATE TABLE IF NOT EXISTS Nonce(
     publicKey bytea PRIMARY KEY,
-    nonce integer
+    nonce integer,
+    FOREIGN KEY (publicKey)
+        REFERENCES Balance (publicKey)
 );
 
 CREATE TABLE IF NOT EXISTS Transactions(

@@ -13,7 +13,7 @@ import java.util.List;
 
 public class Transactions {
 
-    public static void addTransaction(byte[] publicKeySender, byte[] publicKeyReceiver, int amount) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.FailInsertTransactionException, TransactionsExceptions.SenderPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException {
+    public static void addTransaction(byte[] publicKeySender, byte[] publicKeyReceiver, int amount) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.FailInsertTransactionException, TransactionsExceptions.SenderPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.PublicKeyNotFoundException {
         try {
             Connection conn = DBConnection.getConnection();
             conn.setAutoCommit(false);
@@ -25,7 +25,6 @@ public class Transactions {
             ps.setBytes(2, publicKeyReceiver);
             ps.setInt(3, amount);
             ps.setString(4, "Pending");
-            // TODO: verificar mensagem de erro e dar handle por cada caso
             if(ps.executeUpdate() == 0) {
                 throw new TransactionsExceptions.FailInsertTransactionException();
             }
@@ -50,11 +49,15 @@ public class Transactions {
 
             conn.commit();
         } catch (SQLException e) {
-            e.printStackTrace();
+            if (e.getSQLState().equals(Constants.FOREIGN_KEY_DONT_EXISTS)) {
+                throw new TransactionsExceptions.PublicKeyNotFoundException();
+            } else {
+                throw new BalanceExceptions.GeneralMYSQLException();
+            }
         }
     }
 
-    public static void changeStatus(int id, byte[] publicKeyReceiver) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.TransactionIDNotFoundException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, TransactionsExceptions.TransactionPublicKeyReceiverDontMatchException {
+    public static void changeStatus(int id, byte[] publicKeyReceiver) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.TransactionIDNotFoundException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, TransactionsExceptions.TransactionPublicKeyReceiverDontMatchException, BalanceExceptions.GeneralMYSQLException {
         try {
             // get receiver public key and amount in the transaction
             Connection conn = DBConnection.getConnection();
@@ -92,11 +95,11 @@ public class Transactions {
 
             conn.commit();
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new BalanceExceptions.GeneralMYSQLException();
         }
     }
 
-    public static List<String> getPendingTransactions(byte[] publicKey) throws TransactionsExceptions.ReceiverPublicKeyNotFoundException {
+    public static List<String> getPendingTransactions(byte[] publicKey) throws TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException {
         ArrayList<String> list = new ArrayList<>();
         try {
             Connection conn = DBConnection.getConnection();
@@ -114,12 +117,12 @@ public class Transactions {
                 list.add(t.toString());
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new BalanceExceptions.GeneralMYSQLException();
         }
         return list;
     }
 
-    public static List<String> getTransactions(byte[] publicKey) throws TransactionsExceptions.ReceiverPublicKeyNotFoundException, TransactionsExceptions.PublicKeyNotFoundException {
+    public static List<String> getTransactions(byte[] publicKey) throws TransactionsExceptions.ReceiverPublicKeyNotFoundException, TransactionsExceptions.PublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException {
         ArrayList<String> list = new ArrayList<>();
         try {
             Connection conn = DBConnection.getConnection();
@@ -137,7 +140,7 @@ public class Transactions {
                 list.add(t.toString());
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new BalanceExceptions.GeneralMYSQLException();
         }
         return list;
     }

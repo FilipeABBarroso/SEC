@@ -13,4 +13,9 @@ public abstract class BalanceExceptions extends BaseException{
         @Override
         public Exception toResponseException() {return Status.ALREADY_EXISTS.withDescription("Public Key already exists").asException();}
     }
+
+    public static class GeneralMYSQLException extends BalanceExceptions {
+        @Override
+        public Exception toResponseException() {return Status.INTERNAL.asException();}
+    }
 }
