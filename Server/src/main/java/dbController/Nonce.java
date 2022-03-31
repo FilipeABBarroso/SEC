@@ -1,6 +1,7 @@
 package dbController;
 
 import tecnico.sec.proto.exceptions.NonceExceptions;
+import tecnico.sec.proto.exceptions.TransactionsExceptions;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -22,19 +23,21 @@ public class Nonce {
             }
             out = rs.getInt("nonce");
         } catch (SQLException e) {
-
+            e.printStackTrace();
         }
         return out;
     }
 
-    public static void createNonce(byte[] publicKey, int nonce) {
+    public static void createNonce(byte[] publicKey, int nonce) throws NonceExceptions.FailInsertNonceException {
         try {
             Connection conn = DBConnection.getConnection();
             String query = "INSERT INTO NONCE (publicKey,nonce) " + "VALUES (?,?);";
             PreparedStatement ps = conn.prepareStatement(query);
             ps.setBytes(1, publicKey);
             ps.setInt(2, nonce);
-            ps.executeUpdate();
+            if(ps.executeUpdate() == 0) {
+                throw new NonceExceptions.FailInsertNonceException();
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
