@@ -40,6 +40,7 @@ public class Nonce {
                 throw new NonceExceptions.FailInsertNonceException();
             }
         } catch (SQLException e) {
+            System.out.println(e);
             if (e.getSQLState().equals(Constants.DUPLICATED_KEY) || e.getSQLState().equals(Constants.FOREIGN_KEY_DONT_EXISTS)) {
                 throw new NonceExceptions.PublicKeyNotFoundException();
             } else {

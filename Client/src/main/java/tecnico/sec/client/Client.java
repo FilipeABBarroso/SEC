@@ -5,6 +5,7 @@ import com.google.protobuf.ProtocolStringList;
 
 import io.grpc.Status;
 
+import io.grpc.StatusRuntimeException;
 import org.javatuples.Pair;
 import tecnico.sec.KeyStore.singletons.KeyStore;
 import tecnico.sec.grpc.*;
@@ -18,7 +19,7 @@ import java.security.spec.InvalidKeySpecException;
 
 public class Client {
 
-    private static final String serverPubKey = "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAjTu+pLLLj7NKhP9V3KXCV/I6aB19DPspkQpQtSrRO2Akux0Y1aEbShVHmWY/myvHjHSoIeZbMDHMuRQfmMSgqWCenLzHDK1edMLq6Tm/8TvlVRdIE6sDSZZFaG4DmCuR+L8JS93oqdicyKy3EWJRc+Z1yYjq+q/vEKiV8MUHa28LHBxBPFx0U8zC7ajnm3q+rZo14JAzQfzhe2XyAAxG/ewgDurLc5mE1nRP6SXvBG914OR/bKtKG3aklhZDVVodHkvAjJoJK/t42oMHDJGjr+DUlI6Se5J3J6aLgXLHQuJH75vHQ/R793dbR/AKxB/OoURbb1cTclyRE/lKQQgP5TDgtCQ7A/CyYWmPtR7fftVPhH7NkcbuU5rTkMIYSP4s7U27E93WvL1wI954qpCR8t0tStfROIL7WfVbt2zhQT3eqWiav/wXGmqb5ARLmPLYUo8odDJdKKCc5lGwj8NumtPqIKnpH/TtUvWLLSdjFzYR1KBFNsHkeWzh+O713KHu08zH8XcOC5d8JilTnAfSIzUyWJaE0HNuGoeuqyZ2Or3RuZjduVKeMv5NZx7Vvl4vHCjbml5Dcsfzh8vhuPZ06+fTklwNayu+sAkwNmCjTCuUwLnbfAVeHmWjPPXY09Yp03CEKSwKibUlJ4bQBX4rreeHn3cdRBnopm6dn4YCmnMCAwEAAQ==";
+    private static final String serverPubKey = "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAvRrRa/d8h7SjT+VVMxKe2Tg3dhakRkMTKWYlJGYYvgTVLftM4POHs31lG9rSP/HZFN+86OHRZGqbzSjjrFjmzxIFmdftIVqF8szrH3HSdgR2ib6g8nPW8Uc1lOsl53q1MGjyVofYcU3ysD9S3wfHRdIOyrOAEXRU+/b6DELU8lY2ECuXOf3JPfvcDzs4nv+X84tpn1sHRh/H761mT5PrjjWxNbzKIot4/IBllu4wGkss5jOYNc5n3ethXMNoxLR2xVSf12p6hCd+WHN5x1nPLG5yMz0J3GIeD1cex85BVeRdYhD2P1Vd7hifnwLO2KZS8nbPXlTZkNCHXheMpOrstmW7aylDQJLbvvrfg/mnqRmLo/97EG7whuABHoeJD3wlmjOv2GbFBrj3MbFZKYOMbbouMajU2Il3M+5UPfrqn66mnFP0VW3qS1H3hZglJs/HOBs+/cYFXtj+oRIJ93FNWm5pLdhoBtxAkdF3Nd2xNipFVLZTpItAf3jWoiUOKdWHK5r3tXFlu0VJJ4ViCSqNOvLkCvQSuQJkkPihoHp/ZSnH6JRhkoIdihru2RRL1S7AGe6Ub7+766rUBuHRQ8UWSn/dp1AVVhuyTAHJR4JLWAZaeoMAiWlz3rtKL0h1y89Los6R6t9WicQLU3qi+1vXVC0bcLzFAOOHyAU+2aGEaecCAwEAAQ==";
 
     public static boolean open_account(PublicKey key) {
         byte[] pubKeyField = key.getEncoded();
@@ -57,8 +58,14 @@ public class Client {
     public static boolean send_amount(PublicKey source, PublicKey destination, int amount) {
 
         byte[] sourceField = source.getEncoded();
-
-        int nonce = ServerConnection.getConnection().getNonce(NonceRequest.newBuilder().setPublicKey(ByteString.copyFrom(sourceField)).build()).getNonce();
+        NonceResponse nonceResponse = null;
+        try {
+            nonceResponse = ServerConnection.getConnection().getNonce(NonceRequest.newBuilder().setPublicKey(ByteString.copyFrom(sourceField)).build());
+        } catch (StatusRuntimeException e){
+            Status status = Status.fromThrowable(e);
+            System.out.println("CLIENT ERROR : " + status.getCode() + " : " + status.getDescription());
+        }
+        int nonce = nonceResponse.getNonce();
 
         byte[] destinationField = destination.getEncoded();
         byte[] signature;
@@ -93,6 +100,7 @@ public class Client {
             checkSignature(KeyStore.stringToPublicKey(serverPubKey).getEncoded(), sendAmountResponse.getSignature().toByteArray(), sourceField,destinationField,amount,nonce+1);
             return true;
         } catch (BaseException e) {
+            System.out.println(e);
             Status status = Status.fromThrowable(e);
             System.out.println("CLIENT ERROR : " + status.getCode() + " : " + status.getDescription());
         } catch (NoSuchAlgorithmException e) {

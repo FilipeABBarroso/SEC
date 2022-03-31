@@ -25,10 +25,10 @@ public class KeyStore {
             try {
                 credentials = loadKeyPair();
                 System.out.println("");
-            } catch (CertificateException | UnrecoverableEntryException | IOException e){
+            } catch (CertificateException | UnrecoverableEntryException | KeyExceptions.KeyStoreException | NoSuchAlgorithmException | KeyStoreException e){
                 System.out.println("Wrong password!");
                 System.exit(0);
-            } catch (Exception e) {
+            } catch (IOException e) {
                 e.printStackTrace();
                 credentials = KeyTools.getKeyPairGenerator().generateKeyPair();
                 try {
