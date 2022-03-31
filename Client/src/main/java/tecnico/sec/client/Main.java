@@ -19,7 +19,7 @@ public class Main {
         System.out.println("Welcome to BFTB!\n");
         try {
             System.out.println(KeyStore.publicKeyToString(KeyStore.getCredentials().getPublic()));
-        } catch (KeyExceptions.NoSuchAlgorithmException e) {
+        } catch (KeyExceptions.GeneralKeyStoreErrorException e) {
             System.out.println("Error trying to get credentials...");
             return;
         }
@@ -55,7 +55,7 @@ public class Main {
             } else {
                 System.out.println("Failed to open account!");
             }
-        } catch (KeyExceptions.NoSuchAlgorithmException e) {
+        } catch (KeyExceptions.GeneralKeyStoreErrorException e) {
             e.printStackTrace();
         }
     }
@@ -80,7 +80,7 @@ public class Main {
             } else {
                 System.out.println("Failed to send amount!");
             }
-        } catch (KeyExceptions.NoSuchAlgorithmException e) {
+        } catch (KeyExceptions.GeneralKeyStoreErrorException e) {
             e.printStackTrace();
         }
     }
@@ -96,7 +96,7 @@ public class Main {
             } else {
                 System.out.println("Failed to receive amount!");
             }
-        } catch (KeyExceptions.NoSuchAlgorithmException e) {
+        } catch (KeyExceptions.GeneralKeyStoreErrorException e) {
             e.printStackTrace();
         }
     }
@@ -105,7 +105,7 @@ public class Main {
         Pair<Integer,ProtocolStringList> res = null;
         try {
             res = Client.check_account(KeyStore.getPublicKey());
-        } catch (KeyExceptions.NoSuchAlgorithmException e) {
+        } catch (KeyExceptions.GeneralKeyStoreErrorException e) {
             e.printStackTrace();
         }
         if (res!=null) {
@@ -120,7 +120,7 @@ public class Main {
         ProtocolStringList res = null;
         try {
             res = Client.audit(KeyStore.getPublicKey());
-        } catch (KeyExceptions.NoSuchAlgorithmException e) {
+        }catch (KeyExceptions.GeneralKeyStoreErrorException e) {
             e.printStackTrace();
         }
         if(res != null){
@@ -131,6 +131,10 @@ public class Main {
     }
 
     private static void listTransactions(ProtocolStringList transactions) {
+        if(transactions.isEmpty()){
+            System.out.println("No transactions!");
+            return;
+        }
         transactions.forEach(System.out::println);
     }
 }
