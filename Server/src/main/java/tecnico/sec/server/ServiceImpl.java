@@ -24,7 +24,11 @@ public class ServiceImpl extends ServiceImplBase {
         } catch (NonceExceptions.NonceNotFoundException e) {
             SecureRandom random = new SecureRandom();
             nonce = random.nextInt();
-            Nonce.createNonce(publicKey , nonce);
+            try {
+                Nonce.createNonce(publicKey , nonce);
+            } catch (NonceExceptions.FailInsertNonceException ex) {
+                responseObserver.onError(ex);
+            }
         }
         responseObserver.onNext(NonceResponse.newBuilder().setNonce(nonce).build());
         responseObserver.onCompleted();
