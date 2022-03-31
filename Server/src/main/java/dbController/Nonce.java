@@ -1,6 +1,6 @@
 package dbController;
 
-import tecnico.sec.proto.exceptions.DataBaseExceptions;
+import tecnico.sec.proto.exceptions.BalanceExceptions;
 import tecnico.sec.proto.exceptions.NonceExceptions;
 import tecnico.sec.proto.exceptions.TransactionsExceptions;
 
@@ -11,7 +11,7 @@ import java.sql.SQLException;
 
 public class Nonce {
 
-    public static int getNonce (byte[] publicKey) throws NonceExceptions.NonceNotFoundException {
+    public static int getNonce (byte[] publicKey) throws NonceExceptions.NonceNotFoundException, BalanceExceptions.GeneralMYSQLException {
         int out = 0;
         try {
             Connection conn = DBConnection.getConnection();
@@ -24,12 +24,12 @@ public class Nonce {
             }
             out = rs.getInt("nonce");
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new BalanceExceptions.GeneralMYSQLException();
         }
         return out;
     }
 
-    public static void createNonce(byte[] publicKey, int nonce) throws NonceExceptions.FailInsertNonceException, DataBaseExceptions.GeneralDatabaseError {
+    public static void createNonce(byte[] publicKey, int nonce) throws NonceExceptions.FailInsertNonceException, BalanceExceptions.GeneralMYSQLException, NonceExceptions.PublicKeyNotFoundException {
         try {
             Connection conn = DBConnection.getConnection();
             String query = "INSERT INTO NONCE (publicKey,nonce) " + "VALUES (?,?);";
@@ -40,7 +40,11 @@ public class Nonce {
                 throw new NonceExceptions.FailInsertNonceException();
             }
         } catch (SQLException e) {
-            throw new DataBaseExceptions.GeneralDatabaseError();
+            if (e.getSQLState().equals(Constants.DUPLICATED_KEY) || e.getSQLState().equals(Constants.FOREIGN_KEY_DONT_EXISTS)) {
+                throw new NonceExceptions.PublicKeyNotFoundException();
+            } else {
+                throw new BalanceExceptions.GeneralMYSQLException();
+            }
         }
     }
 }
