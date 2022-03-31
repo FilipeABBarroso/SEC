@@ -19,7 +19,7 @@ public class Transactions {
             conn.setAutoCommit(false);
 
             // Add transaction
-            String query = "INSERT INTO TRANSACTIONS (publicKeySender,publicKeyReceiver,amount,completed) " + "VALUES (?,?,?,?);";
+            String query = "INSERT INTO TRANSACTIONS (publicKeySender,publicKeyReceiver,amount,status) " + "VALUES (?,?,?,?::statusOptions);";
             PreparedStatement ps = conn.prepareStatement(query);
             ps.setBytes(1, publicKeySender);
             ps.setBytes(2, publicKeyReceiver);
@@ -52,6 +52,7 @@ public class Transactions {
             if (e.getSQLState().equals(Constants.FOREIGN_KEY_DONT_EXISTS)) {
                 throw new TransactionsExceptions.PublicKeyNotFoundException();
             } else {
+                System.out.println(e);
                 throw new BalanceExceptions.GeneralMYSQLException();
             }
         }
@@ -103,7 +104,7 @@ public class Transactions {
         ArrayList<String> list = new ArrayList<>();
         try {
             Connection conn = DBConnection.getConnection();
-            String query = "SELECT * FROM TRANSACTIONS WHERE publicKeyReceiver=? AND status=?;";
+            String query = "SELECT * FROM TRANSACTIONS WHERE publicKeyReceiver=? AND status=?::statusOptions;";
             PreparedStatement ps = conn.prepareStatement(query);
             ps.setBytes(1, publicKey);
             ps.setString(2, "Pending");
@@ -117,6 +118,7 @@ public class Transactions {
                 list.add(t.toString());
             }
         } catch (SQLException e) {
+            System.out.println(e);
             throw new BalanceExceptions.GeneralMYSQLException();
         }
         return list;

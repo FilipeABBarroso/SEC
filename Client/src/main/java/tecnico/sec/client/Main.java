@@ -18,7 +18,7 @@ public class Main {
     public static void main(String[] args) {
         System.out.println("Welcome to BFTB!\n");
         try {
-            KeyStore.getCredentials();
+            System.out.println(KeyStore.publicKeyToString(KeyStore.getCredentials().getPublic()));
         } catch (KeyExceptions.NoSuchAlgorithmException e) {
             System.out.println("Error trying to get credentials...");
             return;

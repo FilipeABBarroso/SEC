@@ -7,6 +7,7 @@ import io.grpc.stub.StreamObserver;
 import tecnico.sec.KeyStore.singletons.Sign;
 import tecnico.sec.grpc.*;
 import tecnico.sec.grpc.ServiceGrpc.ServiceImplBase;
+import tecnico.sec.proto.exceptions.BalanceExceptions;
 import tecnico.sec.proto.exceptions.BaseException;
 import tecnico.sec.proto.exceptions.DataBaseExceptions;
 import tecnico.sec.proto.exceptions.NonceExceptions;
@@ -22,12 +23,12 @@ public class ServiceImpl extends ServiceImplBase {
         int nonce;
         try {
             nonce = Nonce.getNonce(publicKey);
-        } catch (NonceExceptions.NonceNotFoundException e) {
+        } catch (NonceExceptions.NonceNotFoundException | BalanceExceptions.GeneralMYSQLException e) {
             SecureRandom random = new SecureRandom();
             nonce = random.nextInt();
             try {
                 Nonce.createNonce(publicKey , nonce);
-            } catch (NonceExceptions.FailInsertNonceException | DataBaseExceptions.GeneralDatabaseError ex) {
+            } catch (NonceExceptions.FailInsertNonceException | BalanceExceptions.GeneralMYSQLException | NonceExceptions.PublicKeyNotFoundException ex) {
                 responseObserver.onError(ex);
             }
         }
@@ -57,9 +58,8 @@ public class ServiceImpl extends ServiceImplBase {
         int amount = request.getAmount();
         int nonce = request.getNonce();
         byte[] signature = request.getSignature().toByteArray();
-
         try {
-            Sign.checkSignature(publicKeySource, signature, publicKeySource);
+            Sign.checkSignature(publicKeySource, signature, publicKeySource , publicKeyDestination , amount , nonce);
             Transactions.addTransaction(publicKeySource , publicKeyDestination , amount);
             byte[] signedIncrementedNonce = Sign.signMessage(publicKeySource , publicKeyDestination , amount , nonce + 1);
             responseObserver.onNext(SendAmountResponse.newBuilder().setSignature(ByteString.copyFrom(signedIncrementedNonce)).build());
