@@ -3,6 +3,7 @@ option java_multiple_files = true;
 package tecnico.sec.grpc;
 
 message NonceRequest {
+  bytes publicKey = 1;
 }
 message NonceResponse {
   int32 nonce = 1;
