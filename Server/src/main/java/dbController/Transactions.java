@@ -14,11 +14,24 @@ import java.util.List;
 
 public class Transactions {
 
-    public static void addTransaction(byte[] publicKeySender, byte[] publicKeyReceiver, int amount) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.FailInsertTransactionException, TransactionsExceptions.SenderPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.PublicKeyNotFoundException {
+    public static void addTransaction(byte[] publicKeySender, byte[] publicKeyReceiver, int amount) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.FailInsertTransactionException, TransactionsExceptions.SenderPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.PublicKeyNotFoundException, TransactionsExceptions.BalanceNotEnoughException, TransactionsExceptions.ReceiverPublicKeyNotFoundException {
         try {
             Connection conn = DBConnection.getConnection();
-            conn.setAutoCommit(false);
 
+            // Check if sender has enough
+            String checkBalanceQuery = "SELECT balance FROM BALANCE WHERE publicKey=?;";
+            PreparedStatement checkBalancePS = conn.prepareStatement(checkBalanceQuery);
+            checkBalancePS.setBytes(1, publicKeySender);
+            ResultSet checkBalanceRS = checkBalancePS.executeQuery();
+            if(!checkBalanceRS.next()) {
+                throw new TransactionsExceptions.SenderPublicKeyNotFoundException();
+            } else {
+                if (checkBalanceRS.getInt("balance") < amount){
+                    throw new TransactionsExceptions.BalanceNotEnoughException();
+                }
+            }
+
+            conn.setAutoCommit(false);
             // Add transaction
             String query = "INSERT INTO TRANSACTIONS (publicKeySender,publicKeyReceiver,amount,status) " + "VALUES (?,?,?,?::statusOptions);";
             PreparedStatement ps = conn.prepareStatement(query);
@@ -31,7 +44,7 @@ public class Transactions {
             }
 
             // update sender balance
-            int updatedBalance = Balance.getBalance(publicKeySender) + amount;
+            int updatedBalance = Balance.getBalance(publicKeySender) - amount;
             String secondQuery = "UPDATE BALANCE set balance = ? where publicKey=?;";
             PreparedStatement balancePs = conn.prepareStatement(secondQuery);
             balancePs.setInt(1, updatedBalance);
@@ -51,7 +64,12 @@ public class Transactions {
             conn.commit();
         } catch (SQLException e) {
             if (e.getSQLState().equals(Constants.FOREIGN_KEY_DONT_EXISTS)) {
-                throw new TransactionsExceptions.PublicKeyNotFoundException();
+                if (e.getMessage().contains("Receiver")){
+                    throw new TransactionsExceptions.ReceiverPublicKeyNotFoundException();
+                } else {
+                    throw new TransactionsExceptions.SenderPublicKeyNotFoundException();
+                }
+
             } else {
                 throw new BalanceExceptions.GeneralMYSQLException();
             }
@@ -110,7 +128,7 @@ public class Transactions {
             ps.setString(2, "Pending");
             ResultSet rs = ps.executeQuery();
             if (!rs.next()) {
-                throw new TransactionsExceptions.ReceiverPublicKeyNotFoundException();
+                return list;
             }
             while (!rs.next()) {
                 Transaction t = new Transaction(rs.getBytes("publicKeySender"), rs.getBytes("publicKeySender"),

@@ -48,20 +48,4 @@ public class Balance {
             }
         }
     }
-
-    public static void updateBalance(int amount, byte[] publicKey) throws BalanceExceptions.PublicKeyNotFoundException, NonceExceptions.NonceNotFoundException, BalanceExceptions.GeneralMYSQLException {
-        try {
-            int updatedBalance = getBalance(publicKey) + amount;
-            Connection conn = DBConnection.getConnection();
-            String query = "UPDATE BALANCE set balance = ? where publicKey=?;";
-            PreparedStatement ps = conn.prepareStatement(query);
-            ps.setInt(1, updatedBalance);
-            ps.setBytes(2, publicKey);
-            if (ps.executeUpdate() == 0) {
-                throw new BalanceExceptions.PublicKeyNotFoundException();
-            }
-        } catch (SQLException e) {
-            throw new BalanceExceptions.GeneralMYSQLException();
-        }
-    }
 }
