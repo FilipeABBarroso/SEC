@@ -24,23 +24,20 @@ public class KeyStore {
         if (credentials == null) {
             try {
                 credentials = loadKeyPair();
-                System.out.println("");
-            } catch (CertificateException | UnrecoverableEntryException | KeyExceptions.KeyStoreException | NoSuchAlgorithmException | KeyStoreException e){
-                System.out.println("Wrong password!");
-                System.exit(0);
-            } catch (IOException e) {
-                e.printStackTrace();
+            } catch (FileNotFoundException e ){
                 credentials = KeyTools.getKeyPairGenerator().generateKeyPair();
                 try {
                     X509Certificate crt = CertificateGenerator.generate(credentials ,  "SHA256withRSA"  , "SELF" , 0);
                     saveKeyPair(credentials , crt);
-                } catch (OperatorCreationException ex) {
-                    ex.printStackTrace();
-                } catch (CertificateException ex) {
-                    ex.printStackTrace();
-                } catch (CertIOException ex) {
+                } catch (OperatorCreationException | CertificateException | CertIOException ex) {
                     ex.printStackTrace();
                 }
+            } catch (IOException e){
+                System.out.println("Wrong password!");
+                System.exit(0);
+            } catch (Exception e) {
+                e.printStackTrace();
+
             }
         }
         return credentials;
@@ -94,7 +91,6 @@ public class KeyStore {
             keyStore.setCertificateEntry(KEYSTOREALIASCERTIFICATE , cert);
             java.io.FileOutputStream fos = new java.io.FileOutputStream(KEYSTOREPATH + "keystore.jks");
             keyStore.store(fos, password);
-            System.out.println(keyStore.getCertificate(KEYSTOREALIASCERTIFICATE).getPublicKey());
             fos.close();
 
         } catch (IOException e) {
