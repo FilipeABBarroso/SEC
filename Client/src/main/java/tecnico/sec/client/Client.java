@@ -70,11 +70,6 @@ public class Client {
         byte[] destinationField = destination.getEncoded();
         byte[] signature;
 
-        System.out.println(sourceField);
-        System.out.println(destinationField);
-        System.out.println(amount);
-        System.out.println(nonce);
-
         try {
             signature = signMessage(sourceField, destinationField, amount, nonce);
         } catch (BaseException e) {

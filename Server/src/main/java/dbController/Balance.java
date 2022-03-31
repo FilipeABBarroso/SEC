@@ -23,6 +23,7 @@ public class Balance {
             }
             balance = rs.getInt("balance");
         } catch (SQLException e) {
+            System.out.println(e);
             throw new BalanceExceptions.GeneralMYSQLException();
         }
         return balance;

@@ -9,6 +9,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Transactions {
@@ -52,7 +53,6 @@ public class Transactions {
             if (e.getSQLState().equals(Constants.FOREIGN_KEY_DONT_EXISTS)) {
                 throw new TransactionsExceptions.PublicKeyNotFoundException();
             } else {
-                System.out.println(e);
                 throw new BalanceExceptions.GeneralMYSQLException();
             }
         }
@@ -69,14 +69,14 @@ public class Transactions {
             if (!pkAndAmountRs.next()) {
                 throw new TransactionsExceptions.TransactionIDNotFoundException();
             }
-            if (publicKeyReceiver != pkAndAmountRs.getBytes("publicKeyReceiver")) {
+            if (!Arrays.equals(publicKeyReceiver, pkAndAmountRs.getBytes("publicKeyReceiver"))) {
                 throw new TransactionsExceptions.TransactionPublicKeyReceiverDontMatchException();
             }
 
             conn.setAutoCommit(false);
 
             // change transaction status to completed
-            String query = "UPDATE TRANSACTIONS set status = ? where id=?;";
+            String query = "UPDATE TRANSACTIONS set status = ?::statusOptions where id=?;";
             PreparedStatement ps = conn.prepareStatement(query);
             ps.setString(1, "Completed");
             ps.setInt(2, id);

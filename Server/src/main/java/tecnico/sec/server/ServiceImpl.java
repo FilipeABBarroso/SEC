@@ -13,6 +13,7 @@ import tecnico.sec.proto.exceptions.DataBaseExceptions;
 import tecnico.sec.proto.exceptions.NonceExceptions;
 
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.List;
 
 public class ServiceImpl extends ServiceImplBase {
@@ -51,6 +52,21 @@ public class ServiceImpl extends ServiceImplBase {
         }
     }
 
+    public static String byteToHex(byte num) {
+        char[] hexDigits = new char[2];
+        hexDigits[0] = Character.forDigit((num >> 4) & 0xF, 16);
+        hexDigits[1] = Character.forDigit((num & 0xF), 16);
+        return new String(hexDigits);
+    }
+
+    public static String encodeHexString(byte[] byteArray) {
+        StringBuffer hexStringBuffer = new StringBuffer();
+        for (int i = 0; i < byteArray.length; i++) {
+            hexStringBuffer.append(byteToHex(byteArray[i]));
+        }
+        return "0x" + hexStringBuffer;
+    }
+
     @Override
     public void sendAmount(SendAmountRequest request, StreamObserver<SendAmountResponse> responseObserver) {
         byte[] publicKeySource = request.getPublicKeySource().toByteArray();
@@ -58,6 +74,11 @@ public class ServiceImpl extends ServiceImplBase {
         int amount = request.getAmount();
         int nonce = request.getNonce();
         byte[] signature = request.getSignature().toByteArray();
+        System.out.println(encodeHexString(publicKeySource));
+        System.out.println(encodeHexString(publicKeyDestination));
+        System.out.println(Arrays.toString(publicKeySource));
+        System.out.println(Arrays.toString(publicKeyDestination));
+        System.out.println(Arrays.equals(publicKeySource ,  publicKeyDestination));
         try {
             Sign.checkSignature(publicKeySource, signature, publicKeySource , publicKeyDestination , amount , nonce);
             Transactions.addTransaction(publicKeySource , publicKeyDestination , amount);
@@ -76,7 +97,7 @@ public class ServiceImpl extends ServiceImplBase {
         byte[] signature = request.getSignature().toByteArray();
 
         try {
-            Sign.checkSignature(publicKey, signature, publicKey);
+            Sign.checkSignature(publicKey, signature, publicKey , transactionID);
             Transactions.changeStatus(transactionID , publicKey);
             byte[] signedFields = Sign.signMessage(publicKey , transactionID);
             responseObserver.onNext(ReceiveAmountResponse.newBuilder().setSignature(ByteString.copyFrom(signedFields)).build());
