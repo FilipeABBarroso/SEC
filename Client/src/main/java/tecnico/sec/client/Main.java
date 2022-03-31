@@ -25,26 +25,34 @@ public class Main {
         }
         while (true) {
             Scanner in = new Scanner(System.in);
-            System.out.println("""
-                    Select what you want to do:
-                    0.Open Account
-                    1.Send Money
-                    2.Check Balance
-                    3.Receive Money
-                    4.Audit Account
-                    5.Leave""");
-            int selected = in.nextInt();
-            switch (selected) {
-                case 0 -> open_account_request();
-                case 1 -> send_amount_request();
-                case 2 -> check_account_request();
-                case 3 -> receive_amount_request();
-                case 4 -> audit_request();
-                default -> {
-                    System.out.println("Goodbye!");
-                    return;
+            System.out.print("""
+                    1.Open Account
+                    2.Send Money
+                    3.Check Balance
+                    4.Receive Money
+                    5.Audit Account
+                    0.Leave
+                    Select what you want to do:""");
+            try {
+                String selected = in.nextLine();
+                switch (Integer.parseInt(selected)) {
+                    case 0 ->  {
+                        System.out.println("Goodbye!");
+                        return;
+                    }
+                    case 1 -> open_account_request();
+                    case 2 -> send_amount_request();
+                    case 3 -> check_account_request();
+                    case 4 -> receive_amount_request();
+                    case 5 -> audit_request();
+                    default -> {
+                        System.out.println("\nBad Input!\n");
+                    }
                 }
+            } catch (Exception e){
+                System.out.println("\nBad Input!\n");
             }
+
         }
     }
 
