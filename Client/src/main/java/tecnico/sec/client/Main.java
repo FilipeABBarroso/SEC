@@ -131,6 +131,10 @@ public class Main {
     }
 
     private static void listTransactions(ProtocolStringList transactions) {
+        if(transactions.isEmpty()){
+            System.out.println("No transactions!");
+            return;
+        }
         transactions.forEach(System.out::println);
     }
 }
