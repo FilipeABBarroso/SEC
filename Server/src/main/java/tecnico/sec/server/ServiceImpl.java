@@ -1,5 +1,6 @@
 package tecnico.sec.server;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.ProtocolStringList;
 import dbController.Balance;
 import dbController.Nonce;
 import dbController.Transactions;
@@ -115,17 +116,20 @@ public class ServiceImpl extends ServiceImplBase {
             int balance = Balance.getBalance(publicKey);
             List<String> transactions = Transactions.getPendingTransactions(publicKey);
 
-            byte[] signedFields = Sign.signMessage(balance , transactions);
             CheckAccountResponse.Builder builder = CheckAccountResponse.newBuilder();
-            builder.setSignature(ByteString.copyFrom(signedFields));
             int count = 0;
             for(String t : transactions){
                 builder.setTransactions(count , t);
                 count++;
             }
+            builder.setBalance(balance);
+            byte[] signedFields = Sign.signMessage(balance , builder.getTransactionsList().toArray());
+            builder.setSignature(ByteString.copyFrom(signedFields));
+
             responseObserver.onNext(builder.build());
             responseObserver.onCompleted();
         } catch (BaseException e) {
+            System.out.println(e);
             responseObserver.onError(e.toResponseException());
         }
     }
