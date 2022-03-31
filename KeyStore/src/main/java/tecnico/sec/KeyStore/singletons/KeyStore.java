@@ -29,7 +29,6 @@ public class KeyStore {
                 System.out.println("Wrong password!");
                 System.exit(0);
             } catch (IOException e) {
-                e.printStackTrace();
                 credentials = KeyTools.getKeyPairGenerator().generateKeyPair();
                 try {
                     X509Certificate crt = CertificateGenerator.generate(credentials ,  "SHA256withRSA"  , "SELF" , 0);

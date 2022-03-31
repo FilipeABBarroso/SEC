@@ -154,9 +154,10 @@ public class Client {
             return null;
         }
         try {
-            checkSignature(KeyStore.stringToPublicKey(serverPubKey).getEncoded(), checkAccountResponse.getSignature().toByteArray(), checkAccountResponse.getBalance(), checkAccountResponse.getTransactionsList());
+            checkSignature(KeyStore.stringToPublicKey(serverPubKey).getEncoded(), checkAccountResponse.getSignature().toByteArray(), checkAccountResponse.getBalance(), checkAccountResponse.getTransactionsList().toArray());
             return Pair.with(checkAccountResponse.getBalance(),checkAccountResponse.getTransactionsList());
         } catch (BaseException e) {
+            e.printStackTrace();
             Status status = Status.fromThrowable(e);
             System.out.println("CLIENT ERROR : " + status.getCode() + " : " + status.getDescription());
         } catch (NoSuchAlgorithmException e) {
