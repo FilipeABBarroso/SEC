@@ -1,48 +1,62 @@
 package tecnico.sec.KeyStore.singletons;
 
+import org.bouncycastle.cert.CertIOException;
+import org.bouncycastle.operator.OperatorCreationException;
 import tecnico.sec.proto.exceptions.KeyExceptions;
-
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.*;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
-import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
+import java.util.Scanner;
 
 public class KeyStore {
 
     private static KeyPair credentials;
 
     private static final String KEYSTOREPATH = "";
+    private static final String KEYSTOREALIASPRIVATE = "PRIVATEKEY";
+    private static final String KEYSTOREALIASCERTIFICATE = "CERTIFICATE";
 
     public static KeyPair getCredentials() throws KeyExceptions.NoSuchAlgorithmException{
         if (credentials == null) {
             try {
                 credentials = loadKeyPair();
-            } catch (IOException | InvalidKeySpecException e) {
+                System.out.println("");
+            } catch (CertificateException | UnrecoverableEntryException | IOException e){
+                System.out.println("Wrong password!");
+                System.exit(0);
+            } catch (Exception e) {
+                e.printStackTrace();
                 credentials = KeyTools.getKeyPairGenerator().generateKeyPair();
-                saveKeyPair(credentials);
+                try {
+                    X509Certificate crt = CertificateGenerator.generate(credentials ,  "SHA256withRSA"  , "SELF" , 0);
+                    saveKeyPair(credentials , crt);
+                } catch (OperatorCreationException ex) {
+                    ex.printStackTrace();
+                } catch (CertificateException ex) {
+                    ex.printStackTrace();
+                } catch (CertIOException ex) {
+                    ex.printStackTrace();
+                }
             }
         }
         return credentials;
     }
 
-    public static PublicKey getPublicKey(){
-        return credentials.getPublic();
+    public static PublicKey getPublicKey() throws KeyExceptions.NoSuchAlgorithmException {
+        return getCredentials().getPublic();
     }
 
-    public static PrivateKey getPrivateKey(){
-        return credentials.getPrivate();
+    public static PrivateKey getPrivateKey() throws KeyExceptions.NoSuchAlgorithmException {
+        return getCredentials().getPrivate();
     }
 
     public static PublicKey toPublicKey(byte[] publicKey) throws KeyExceptions.InvalidPublicKeyException, KeyExceptions.NoSuchAlgorithmException{
         try {
-            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicKey);
-            KeyFactory keyFactory = KeyTools.getKeyFactory();
-            return keyFactory.generatePublic(keySpec);
+            return KeyTools.getKeyFactory().generatePublic(new X509EncodedKeySpec(publicKey));
         } catch (InvalidKeySpecException e) {
             throw new KeyExceptions.InvalidPublicKeyException();
         }
@@ -55,42 +69,59 @@ public class KeyStore {
         return keyFactory.generatePublic(keySpec);
     }
 
-    private static void saveToFile(String path , byte[] toSave) throws IOException {
-        FileOutputStream fos = new FileOutputStream(path);
-        fos.write(toSave);
-        fos.close();
+    private static char[] requestPassword(){
+        Console console = System.console();
+        if(console != null){
+            return console.readPassword("Enter your secret password: ");
+        }
+        System.out.print("Enter your secret password: ");
+        Scanner s = new Scanner(System.in);
+        return s.nextLine().toCharArray();
     }
 
-    private static void saveKeyPair(KeyPair keyPair){
+    private static void saveKeyPair(KeyPair keyPair , X509Certificate cert){
+
+        X509Certificate[] certificateChain = new X509Certificate[1];
+        certificateChain[0] = cert;
         try {
-            PublicKey publicKey = keyPair.getPublic();
-            saveToFile(KEYSTOREPATH + "public.pub" , publicKey.getEncoded());
-            PrivateKey privateKey = keyPair.getPrivate();
-            saveToFile(KEYSTOREPATH + "private.key" , privateKey.getEncoded());
+            char[] password = requestPassword();
+            java.security.KeyStore keyStore = KeyTools.getKeyStore();
+            keyStore.setKeyEntry(KEYSTOREALIASPRIVATE , keyPair.getPrivate() , password , certificateChain);
+            keyStore.setCertificateEntry(KEYSTOREALIASCERTIFICATE , cert);
+            java.io.FileOutputStream fos = new java.io.FileOutputStream(KEYSTOREPATH + "keystore.jks");
+            keyStore.store(fos, password);
+            System.out.println(keyStore.getCertificate(KEYSTOREALIASCERTIFICATE).getPublicKey());
+            fos.close();
 
         } catch (IOException e) {
+            e.printStackTrace();
+        } catch (KeyExceptions.KeyStoreException e) {
+            e.printStackTrace();
+        } catch (KeyStoreException e) {
+            e.printStackTrace();
+        } catch (CertificateException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
     }
 
-    private static byte[] readFile(String path) throws IOException {
-        Path keyPath = Paths.get(path);
-        return Files.readAllBytes(keyPath);
-    }
+    private static KeyPair loadKeyPair() throws IOException, KeyExceptions.KeyStoreException, CertificateException, NoSuchAlgorithmException, KeyStoreException, UnrecoverableEntryException{
+        char[] password = requestPassword();
+        File initialFile = new File(KEYSTOREPATH + "keystore.jks");
+        InputStream ins = new FileInputStream(initialFile);
 
-    private static KeyPair loadKeyPair() throws InvalidKeySpecException, IOException, KeyExceptions.NoSuchAlgorithmException {
+        java.security.KeyStore keyStore = KeyTools.getKeyStore();
+        keyStore.load(ins, password);
+        java.security.KeyStore.PasswordProtection keyPassword = new java.security.KeyStore.PasswordProtection(password);
 
-        KeyFactory keyFactory = KeyTools.getKeyFactory();
+        PublicKey publicKey = keyStore.getCertificate(KEYSTOREALIASCERTIFICATE).getPublicKey();
 
-        byte[] encodedPublicKey = readFile(KEYSTOREPATH + "public.pub");
-        X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(encodedPublicKey);
-        PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
-
-        byte[] encodedPrivateKey = readFile(KEYSTOREPATH + "private.key");
-        PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(encodedPrivateKey);
-        PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);
+        java.security.KeyStore.PrivateKeyEntry privateKeyEntry = (java.security.KeyStore.PrivateKeyEntry) keyStore.getEntry(KEYSTOREALIASPRIVATE, keyPassword);
+        PrivateKey privateKey = privateKeyEntry.getPrivateKey();
 
         return new KeyPair(publicKey, privateKey);
+
     }
 
 }
@@ -98,9 +129,11 @@ public class KeyStore {
 class KeyTools{
 
     private static final String ALGORITHM = "RSA";
+    private static final String KEYSTOREALGORITHM = "JCEKS";
 
     private static KeyFactory keyFactory;
     private static KeyPairGenerator keyGen;
+    private static java.security.KeyStore keyStore;
 
     public static KeyFactory getKeyFactory() throws KeyExceptions.NoSuchAlgorithmException {
         if (keyFactory == null) {
@@ -125,6 +158,24 @@ class KeyTools{
             }
         }
         return keyGen;
+    }
+
+    public static java.security.KeyStore getKeyStore() throws KeyExceptions.KeyStoreException {
+        if (keyStore == null) {
+            try {
+                keyStore = java.security.KeyStore.getInstance(KEYSTOREALGORITHM);
+                keyStore.load(null , null);
+            } catch (KeyStoreException e) {
+                throw new KeyExceptions.KeyStoreException();
+            } catch (CertificateException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            }
+        }
+        return keyStore;
     }
 }
 

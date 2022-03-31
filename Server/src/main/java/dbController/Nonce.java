@@ -1,5 +1,6 @@
 package dbController;
 
+import tecnico.sec.proto.exceptions.DataBaseExceptions;
 import tecnico.sec.proto.exceptions.NonceExceptions;
 import tecnico.sec.proto.exceptions.TransactionsExceptions;
 
@@ -28,7 +29,7 @@ public class Nonce {
         return out;
     }
 
-    public static void createNonce(byte[] publicKey, int nonce) throws NonceExceptions.FailInsertNonceException {
+    public static void createNonce(byte[] publicKey, int nonce) throws NonceExceptions.FailInsertNonceException, DataBaseExceptions.GeneralDatabaseError {
         try {
             Connection conn = DBConnection.getConnection();
             String query = "INSERT INTO NONCE (publicKey,nonce) " + "VALUES (?,?);";
@@ -39,7 +40,7 @@ public class Nonce {
                 throw new NonceExceptions.FailInsertNonceException();
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new DataBaseExceptions.GeneralDatabaseError();
         }
     }
 }

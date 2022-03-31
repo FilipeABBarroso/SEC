@@ -1,6 +1,7 @@
 package dbController;
 
 import tecnico.sec.proto.exceptions.BalanceExceptions;
+import tecnico.sec.proto.exceptions.DataBaseExceptions;
 import tecnico.sec.proto.exceptions.NonceExceptions;
 import tecnico.sec.proto.exceptions.TransactionsExceptions;
 
@@ -13,7 +14,7 @@ import java.util.List;
 
 public class Transactions {
 
-    public static void addTransaction(byte[] publicKeySender, byte[] publicKeyReceiver, int amount) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.FailInsertTransactionException, TransactionsExceptions.SenderPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException {
+    public static void addTransaction(byte[] publicKeySender, byte[] publicKeyReceiver, int amount) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.FailInsertTransactionException, TransactionsExceptions.SenderPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, DataBaseExceptions.GeneralDatabaseError {
         try {
             Connection conn = DBConnection.getConnection();
             conn.setAutoCommit(false);
@@ -54,7 +55,7 @@ public class Transactions {
         }
     }
 
-    public static void changeStatus(int id, byte[] publicKeyReceiver) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.TransactionIDNotFoundException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, TransactionsExceptions.TransactionPublicKeyReceiverDontMatchException {
+    public static void changeStatus(int id, byte[] publicKeyReceiver) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.TransactionIDNotFoundException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, TransactionsExceptions.TransactionPublicKeyReceiverDontMatchException, DataBaseExceptions.GeneralDatabaseError {
         try {
             // get receiver public key and amount in the transaction
             Connection conn = DBConnection.getConnection();
@@ -92,7 +93,7 @@ public class Transactions {
 
             conn.commit();
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new DataBaseExceptions.GeneralDatabaseError();
         }
     }
 

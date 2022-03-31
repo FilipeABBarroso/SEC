@@ -49,10 +49,14 @@ public class Main {
     }
 
     public static void open_account_request(){
-        if(Client.open_account(KeyStore.getPublicKey())){
-            System.out.println("Account opened!");
-        } else {
-            System.out.println("Failed to open account!");
+        try {
+            if(Client.open_account(KeyStore.getPublicKey())){
+                System.out.println("Account opened!");
+            } else {
+                System.out.println("Failed to open account!");
+            }
+        } catch (KeyExceptions.NoSuchAlgorithmException e) {
+            e.printStackTrace();
         }
     }
 
@@ -70,10 +74,14 @@ public class Main {
         System.out.println("How much you want to send?");
         int amount = in.nextInt();
 
-        if(Client.send_amount(KeyStore.getPublicKey(), destinationPubKey, amount)){
-            System.out.println("Amount sent!");
-        } else {
-            System.out.println("Failed to send amount!");
+        try {
+            if(Client.send_amount(KeyStore.getPublicKey(), destinationPubKey, amount)){
+                System.out.println("Amount sent!");
+            } else {
+                System.out.println("Failed to send amount!");
+            }
+        } catch (KeyExceptions.NoSuchAlgorithmException e) {
+            e.printStackTrace();
         }
     }
 
@@ -82,15 +90,24 @@ public class Main {
         System.out.println("What transactionID you want to receive?");
         int transactionID = in.nextInt();
 
-        if(Client.receive_amount(KeyStore.getPublicKey(), transactionID)) {
-            System.out.println("Amount received!");
-        } else {
-            System.out.println("Failed to receive amount!");
+        try {
+            if(Client.receive_amount(KeyStore.getPublicKey(), transactionID)) {
+                System.out.println("Amount received!");
+            } else {
+                System.out.println("Failed to receive amount!");
+            }
+        } catch (KeyExceptions.NoSuchAlgorithmException e) {
+            e.printStackTrace();
         }
     }
 
     public static void check_account_request() {
-        Pair<Integer,ProtocolStringList> res = Client.check_account(KeyStore.getPublicKey());
+        Pair<Integer,ProtocolStringList> res = null;
+        try {
+            res = Client.check_account(KeyStore.getPublicKey());
+        } catch (KeyExceptions.NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
         if (res!=null) {
             System.out.println("Balance : " + res.getValue0());
             listTransactions(res.getValue1());
@@ -100,7 +117,12 @@ public class Main {
     }
 
     public static void audit_request() {
-        ProtocolStringList res = Client.audit(KeyStore.getPublicKey());
+        ProtocolStringList res = null;
+        try {
+            res = Client.audit(KeyStore.getPublicKey());
+        } catch (KeyExceptions.NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
         if(res != null){
             listTransactions(res);
         } else {

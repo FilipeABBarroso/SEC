@@ -8,6 +8,7 @@ import tecnico.sec.KeyStore.singletons.Sign;
 import tecnico.sec.grpc.*;
 import tecnico.sec.grpc.ServiceGrpc.ServiceImplBase;
 import tecnico.sec.proto.exceptions.BaseException;
+import tecnico.sec.proto.exceptions.DataBaseExceptions;
 import tecnico.sec.proto.exceptions.NonceExceptions;
 
 import java.security.SecureRandom;
@@ -26,7 +27,7 @@ public class ServiceImpl extends ServiceImplBase {
             nonce = random.nextInt();
             try {
                 Nonce.createNonce(publicKey , nonce);
-            } catch (NonceExceptions.FailInsertNonceException ex) {
+            } catch (NonceExceptions.FailInsertNonceException | DataBaseExceptions.GeneralDatabaseError ex) {
                 responseObserver.onError(ex);
             }
         }
@@ -43,10 +44,10 @@ public class ServiceImpl extends ServiceImplBase {
             Balance.openAccount(publicKey);
             byte[] signedPublicKey = Sign.signMessage(publicKey);
             responseObserver.onNext(OpenAccountResponse.newBuilder().setSignature(ByteString.copyFrom(signedPublicKey)).build());
+            responseObserver.onCompleted();
         } catch (BaseException e) {
             responseObserver.onError(e.toResponseException());
         }
-        responseObserver.onCompleted();
     }
 
     @Override
@@ -62,10 +63,10 @@ public class ServiceImpl extends ServiceImplBase {
             Transactions.addTransaction(publicKeySource , publicKeyDestination , amount);
             byte[] signedIncrementedNonce = Sign.signMessage(publicKeySource , publicKeyDestination , amount , nonce + 1);
             responseObserver.onNext(SendAmountResponse.newBuilder().setSignature(ByteString.copyFrom(signedIncrementedNonce)).build());
+            responseObserver.onCompleted();
         } catch (BaseException e) {
             responseObserver.onError(e.toResponseException());
         }
-        responseObserver.onCompleted();
     }
 
     @Override
@@ -79,10 +80,10 @@ public class ServiceImpl extends ServiceImplBase {
             Transactions.changeStatus(transactionID , publicKey);
             byte[] signedFields = Sign.signMessage(publicKey , transactionID);
             responseObserver.onNext(ReceiveAmountResponse.newBuilder().setSignature(ByteString.copyFrom(signedFields)).build());
+            responseObserver.onCompleted();
         } catch (BaseException e) {
             responseObserver.onError(e.toResponseException());
         }
-        responseObserver.onCompleted();
     }
 
     @Override
@@ -102,11 +103,10 @@ public class ServiceImpl extends ServiceImplBase {
                 count++;
             }
             responseObserver.onNext(builder.build());
+            responseObserver.onCompleted();
         } catch (BaseException e) {
             responseObserver.onError(e.toResponseException());
         }
-
-        responseObserver.onCompleted();
     }
 
     @Override
@@ -126,10 +126,9 @@ public class ServiceImpl extends ServiceImplBase {
                 count++;
             }
             responseObserver.onNext(builder.build());
+            responseObserver.onCompleted();
         } catch (BaseException e) {
             responseObserver.onError(e.toResponseException());
         }
-
-        responseObserver.onCompleted();
     }
 }

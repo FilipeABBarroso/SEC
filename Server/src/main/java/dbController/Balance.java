@@ -1,6 +1,7 @@
 package dbController;
 
 import tecnico.sec.proto.exceptions.BalanceExceptions;
+import tecnico.sec.proto.exceptions.DataBaseExceptions;
 import tecnico.sec.proto.exceptions.NonceExceptions;
 
 import java.sql.Connection;
@@ -10,7 +11,7 @@ import java.sql.SQLException;
 
 public class Balance {
 
-    public static int getBalance(byte[] publicKey) throws NonceExceptions.NonceNotFoundException, BalanceExceptions.PublicKeyNotFoundException {
+    public static int getBalance(byte[] publicKey) throws NonceExceptions.NonceNotFoundException, BalanceExceptions.PublicKeyNotFoundException, DataBaseExceptions.GeneralDatabaseError {
         int balance = 0;
         try {
             Connection conn = DBConnection.getConnection();
@@ -23,12 +24,12 @@ public class Balance {
             }
             balance = rs.getInt("balance");
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new DataBaseExceptions.GeneralDatabaseError();
         }
         return balance;
     }
 
-    public static void openAccount(byte[] publicKey) throws BalanceExceptions.PublicKeyAlreadyExistException {
+    public static void openAccount(byte[] publicKey) throws BalanceExceptions.PublicKeyAlreadyExistException, DataBaseExceptions.GeneralDatabaseError {
         try {
             int initialBalance = 1000;
             Connection conn = DBConnection.getConnection();
@@ -40,11 +41,11 @@ public class Balance {
                 throw new BalanceExceptions.PublicKeyAlreadyExistException();
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new DataBaseExceptions.GeneralDatabaseError();
         }
     }
 
-    public static void updateBalance(int amount, byte[] publicKey) throws BalanceExceptions.PublicKeyNotFoundException, NonceExceptions.NonceNotFoundException {
+    public static void updateBalance(int amount, byte[] publicKey) throws BalanceExceptions.PublicKeyNotFoundException, NonceExceptions.NonceNotFoundException, DataBaseExceptions.GeneralDatabaseError {
         try {
             int updatedBalance = getBalance(publicKey) + amount;
             Connection conn = DBConnection.getConnection();
@@ -56,7 +57,7 @@ public class Balance {
                 throw new BalanceExceptions.PublicKeyNotFoundException();
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new DataBaseExceptions.GeneralDatabaseError();
         }
     }
 }

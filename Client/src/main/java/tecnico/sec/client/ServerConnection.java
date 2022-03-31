@@ -23,14 +23,6 @@ public class ServerConnection {
         if(stub == null){
             initConnection();
         }
-        while(channel.getState(true) != ConnectivityState.READY ){
-            System.out.println("Trying again to connect in 10 seconds...");
-            try {
-                Thread.sleep(10000);
-            } catch (InterruptedException e) {
-                System.out.println("Error in wait");
-            }
-        }
         return stub;
     }
 
