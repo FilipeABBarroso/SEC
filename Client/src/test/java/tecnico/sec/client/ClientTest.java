@@ -1,18 +1,27 @@
 package tecnico.sec.client;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
 
 class ClientTest {
 
-    @org.junit.jupiter.api.Test
-    void saveKeyPair() {
+    @Test
+    void open_account() {
     }
 
-    @org.junit.jupiter.api.Test
-    void loadKeyPair() {
+    @Test
+    void send_amount() {
     }
 
-    @org.junit.jupiter.api.Test
-    void generateCredentials() {
+    @Test
+    void receive_amount() {
     }
+
+    @Test
+    void check_account() {
+    }
+
+    @Test
+    void audit() {
+    }
+
 }

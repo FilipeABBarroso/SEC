@@ -1,144 +1,166 @@
 package tecnico.sec.client;
 
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.ProtocolStringList;
 
+import io.grpc.Status;
+
+import org.javatuples.Pair;
 import tecnico.sec.grpc.*;
+import tecnico.sec.proto.exceptions.BaseException;
 
-import static tecnico.sec.client.Main.*;
-import static tecnico.sec.client.Main.pubKeyToString;
+import static tecnico.sec.KeyStore.singletons.Sign.checkSignature;
+import static tecnico.sec.KeyStore.singletons.Sign.signMessage;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.security.*;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
 
-public class Client{
+public class Client {
 
-    private final ServiceGrpc.ServiceBlockingStub stub;
+    private static final byte[] serverPubKey = null;
 
-    //TODO handle exceptions
-
-    public Client(String host, int port) {
-        ManagedChannel channel = ManagedChannelBuilder.forAddress(host, port)
-                .usePlaintext()
-                .build();
-        this.stub = ServiceGrpc.newBlockingStub(channel);
-    }
-
-    public static void saveKeyPair(KeyPair clientKeyPair, String path){
+    public static boolean open_account(PublicKey key) {
+        byte[] pubKeyField = key.getEncoded();
+        byte[] signature;
         try {
-            PrivateKey privateKey = clientKeyPair.getPrivate();
-            PublicKey publicKey = clientKeyPair.getPublic();
-
-            // Store Public Key.
-            X509EncodedKeySpec x509EncodedKeySpec = new X509EncodedKeySpec(
-                    publicKey.getEncoded());
-            FileOutputStream fos = new FileOutputStream( path + "public.key");
-            fos.write(x509EncodedKeySpec.getEncoded());
-            fos.close();
-
-            // Store Private Key.
-            PKCS8EncodedKeySpec pkcs8EncodedKeySpec = new PKCS8EncodedKeySpec(
-                    privateKey.getEncoded());
-            fos = new FileOutputStream(path + "private.key");
-            fos.write(pkcs8EncodedKeySpec.getEncoded());
-            fos.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+            signature = signMessage(pubKeyField);
+        } catch (BaseException e) {
+            System.out.println(e.toResponseException().getMessage());
+            return false;
         }
-    }
-
-    public static KeyPair LoadKeyPair(String path) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException {
-        // Read Public Key.
-        File filePublicKey = new File(path + "public.key");
-        FileInputStream fis = new FileInputStream(path + "public.key");
-        byte[] encodedPublicKey = new byte[(int) filePublicKey.length()];
-        fis.read(encodedPublicKey);
-        fis.close();
-
-        // Read Private Key.
-        File filePrivateKey = new File(path + "private.key");
-        fis = new FileInputStream(path + "private.key");
-        byte[] encodedPrivateKey = new byte[(int) filePrivateKey.length()];
-        fis.read(encodedPrivateKey);
-        fis.close();
-
-        // Generate KeyPair.
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(
-                encodedPublicKey);
-        PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
-
-        PKCS8EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(
-                encodedPrivateKey);
-        PrivateKey privateKey = keyFactory.generatePrivate(privateKeySpec);
-
-        return new KeyPair(publicKey, privateKey);
-    }
-
-    public static KeyPair generateCredentials() throws NoSuchAlgorithmException {
-        KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-        keyGen.initialize(4096);
-        return keyGen.generateKeyPair();
-    }
-
-    public static KeyPair initCredentials(String path) throws NoSuchAlgorithmException {
-        KeyPair clientKeys;
+        OpenAccountResponse openAccountResponse;
         try {
-            System.out.println("Searching for credentials...");
-            clientKeys = LoadKeyPair(path);
-            System.out.println("Credentials Loaded!\n");
-        } catch (IOException | NoSuchAlgorithmException | InvalidKeySpecException e) {
-            System.out.println("Not found! Creating new credentials...\n");
-            clientKeys = generateCredentials();
-            saveKeyPair(clientKeys,path);
+            openAccountResponse = ServerConnection.getConnection().openAccount(OpenAccountRequest.newBuilder()
+                    .setPublicKey(ByteString.copyFrom(pubKeyField))
+                    .setSignature(ByteString.copyFrom(signature))
+                    .build());
+        } catch (Exception e) {
+            Status status = Status.fromThrowable(e);
+            System.out.println("SERVER ERROR : " + status.getCode() + " : " + status.getDescription());
+            return false;
         }
-        return clientKeys;
+        try {
+            checkSignature(serverPubKey, openAccountResponse.getSignature().toByteArray(),pubKeyField);
+            return true;
+        } catch (BaseException e) {
+            Status status = Status.fromThrowable(e);
+            System.out.println("CLIENT ERROR : " + status.getCode() + " : " + status.getDescription());
+        }
+        return false;
     }
 
-    public void open_account(PublicKey key){
-        //TODO
-        OpenAccountResponse openResponse = stub.openAccount(OpenAccountRequest.newBuilder()
-                .setPublicKey(pubKeyToString(key))
-                .build());
+    public static boolean send_amount(PublicKey source, PublicKey destination, int amount) {
+
+        byte[] sourceField = source.getEncoded();
+
+        int nonce = ServerConnection.getConnection().getNonce(NonceRequest.newBuilder().setPublicKey(ByteString.copyFrom(sourceField)).build()).getNonce();
+
+        byte[] destinationField = destination.getEncoded();
+        byte[] signature;
+        try {
+            signature = signMessage(sourceField, destinationField, amount, nonce);
+        } catch (BaseException e) {
+            System.out.println(e.toResponseException().getMessage());
+            return false;
+        }
+
+        SendAmountResponse sendAmountResponse;
+        try {
+            sendAmountResponse = ServerConnection.getConnection().sendAmount(SendAmountRequest.newBuilder()
+                    .setPublicKeySource(ByteString.copyFrom(sourceField))
+                    .setPublicKeyDestination(ByteString.copyFrom(destinationField))
+                    .setAmount(amount)
+                    .setNonce(nonce)
+                    .setSignature(ByteString.copyFrom(signature))
+                    .build());
+        } catch (Exception e) {
+            Status status = Status.fromThrowable(e);
+            System.out.println("SERVER ERROR : " + status.getCode() + " : " + status.getDescription());
+            return false;
+        }
+        try {
+            checkSignature(serverPubKey, sendAmountResponse.getSignature().toByteArray(), sourceField,destinationField,amount,nonce+1);
+            return true;
+        } catch (BaseException e) {
+            Status status = Status.fromThrowable(e);
+            System.out.println("CLIENT ERROR : " + status.getCode() + " : " + status.getDescription());
+        }
+        return false;
     }
 
-    public void send_amount(PublicKey source, PublicKey destination, int amount){
-        //TODO
-        SendAmountResponse sendAmountResponse = stub.sendAmount(SendAmountRequest.newBuilder()
-                .setPublicKeySource(pubKeyToString(source))
-                .setPublicKeyDestination(pubKeyToString(destination))
-                .setAmount(amount)
-                .build());
+    public static boolean receive_amount(PublicKey key, int transactionID) {
+        byte[] pubKeyField = key.getEncoded();
+        byte[] signature;
+        try {
+            signature = signMessage(pubKeyField, transactionID);
+        } catch (BaseException e) {
+            System.out.println(e.toResponseException().getMessage());
+            return false;
+        }
+
+        ReceiveAmountResponse receiveAmountResponse;
+        try {
+            receiveAmountResponse = ServerConnection.getConnection().receiveAmount(ReceiveAmountRequest.newBuilder()
+                    .setPublicKey(ByteString.copyFrom(pubKeyField))
+                    .setTransactionID(transactionID)
+                    .setSignature(ByteString.copyFrom(signature))
+                    .build());
+        } catch (Exception e) {
+            Status status = Status.fromThrowable(e);
+            System.out.println("SERVER ERROR : " + status.getCode() + " : " + status.getDescription());
+            return false;
+        }
+        try {
+            checkSignature(serverPubKey, receiveAmountResponse.getSignature().toByteArray(), pubKeyField,transactionID);
+            return true;
+        } catch (BaseException e) {
+            Status status = Status.fromThrowable(e);
+            System.out.println("CLIENT ERROR : " + status.getCode() + " : " + status.getDescription());
+        }
+        return false;
     }
 
-    public void check_account(PublicKey key){
-        //TODO
-        CheckAccountResponse checkAccountResponse = stub.checkAccount(CheckAccountRequest.newBuilder()
-                .setPublicKey(pubKeyToString(key))
-                .build());
+    public static Pair<Integer,ProtocolStringList> check_account(PublicKey key) {
+        CheckAccountResponse checkAccountResponse;
+        try {
+            checkAccountResponse = ServerConnection.getConnection().checkAccount(CheckAccountRequest.newBuilder()
+                    .setPublicKey(ByteString.copyFrom(key.getEncoded()))
+                    .build());
+        } catch (Exception e) {
+            Status status = Status.fromThrowable(e);
+            System.out.println("SERVER ERROR : " + status.getCode() + " : " + status.getDescription());
+            return null;
+        }
+        try {
+            checkSignature(serverPubKey, checkAccountResponse.getSignature().toByteArray(), checkAccountResponse.getBalance(), checkAccountResponse.getTransactionsList());
+            return Pair.with(checkAccountResponse.getBalance(),checkAccountResponse.getTransactionsList());
+        } catch (BaseException e) {
+            Status status = Status.fromThrowable(e);
+            System.out.println("CLIENT ERROR : " + status.getCode() + " : " + status.getDescription());
+        }
+        return null;
     }
 
-    public void receive_amount(PublicKey key,int transactionID){
-        //TODO
-        ReceiveAmountResponse receiveAmountResponse = stub.receiveAmount(ReceiveAmountRequest.newBuilder()
-                .setPublicKey(pubKeyToString(key))
-                .setTransactionID(transactionID)
-                .build());
+    public static ProtocolStringList audit(PublicKey key) {
+        AuditResponse auditResponse;
+        try {
+            auditResponse = ServerConnection.getConnection().audit(AuditRequest.newBuilder()
+                    .setPublicKey(ByteString.copyFrom(key.getEncoded()))
+                    .build());
+        } catch (Exception e) {
+            Status status = Status.fromThrowable(e);
+            System.out.println("SERVER ERROR : " + status.getCode() + " : " + status.getDescription());
+            return null;
+        }
+        try {
+            checkSignature(serverPubKey, auditResponse.getSignature().toByteArray(), auditResponse.getTransactionsList());
+            return auditResponse.getTransactionsList();
+        } catch (BaseException e) {
+            Status status = Status.fromThrowable(e);
+            System.out.println("CLIENT ERROR : " + status.getCode() + " : " + status.getDescription());
+        }
+        return null;
     }
 
-    public void audit(PublicKey key){
-        //TODO
-        AuditResponse auditResponse = stub.audit(AuditRequest.newBuilder()
-                .setPublicKey(pubKeyToString(key))
-                .build());
-
-    }
 
 }
 

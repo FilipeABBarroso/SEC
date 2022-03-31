@@ -16,7 +16,7 @@ public class KeyStore {
 
     private static KeyPair credentials;
 
-    private static final String KEYSTOREPATH = "/keys/";
+    private static final String KEYSTOREPATH = "";
 
     public static KeyPair getCredentials() throws KeyExceptions.NoSuchAlgorithmException{
         if (credentials == null) {
@@ -48,8 +48,11 @@ public class KeyStore {
         }
     }
 
-    public static String pubKeyToString(PublicKey pubKey) {
-        return Base64.getEncoder().encodeToString(pubKey.getEncoded());
+    public static PublicKey stringToPublicKey(String publicKeyString) throws NoSuchAlgorithmException, InvalidKeySpecException {
+        byte[] publicBytes = Base64.getDecoder().decode(publicKeyString);
+        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+        return keyFactory.generatePublic(keySpec);
     }
 
     private static void saveToFile(String path , byte[] toSave) throws IOException {
