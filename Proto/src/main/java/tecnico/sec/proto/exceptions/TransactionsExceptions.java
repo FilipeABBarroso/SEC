@@ -21,13 +21,13 @@ public abstract class TransactionsExceptions extends BaseException {
     public static class PublicKeyNotFoundException extends TransactionsExceptions {
         @Override
         public Exception toResponseException() {
-            return Status.NOT_FOUND.withDescription("Public key not found").asException();
+            return Status.NOT_FOUND.withDescription("Public key not found in transactions").asException();
         }
     }
 
     public static class FailInsertTransactionException extends TransactionsExceptions {
         @Override
-        public Exception toResponseException() {return Status.NOT_FOUND.withDescription("Fail inserting transaction").asException();}
+        public Exception toResponseException() {return Status.INTERNAL.withDescription("Fail inserting transaction").asException();}
     }
 
     public static class TransactionIDNotFoundException extends TransactionsExceptions {
