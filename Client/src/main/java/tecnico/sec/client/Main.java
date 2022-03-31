@@ -27,9 +27,9 @@ public class Main {
             Scanner in = new Scanner(System.in);
             System.out.print("""
                     1.Open Account
-                    2.Send Money
+                    2.Send Amount
                     3.Check Balance
-                    4.Receive Money
+                    4.Receive Amount
                     5.Audit Account
                     0.Leave
                     Select what you want to do:""");
