@@ -29,4 +29,11 @@ public abstract class KeyExceptions extends BaseException{
             return Status.PERMISSION_DENIED.asException();
         }
     }
+
+    public static class GeneralKeyStoreErrorException extends KeyExceptions{
+        @Override
+        public Exception toResponseException() {
+            return Status.INTERNAL.asException();
+        }
+    }
 }

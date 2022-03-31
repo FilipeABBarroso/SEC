@@ -20,34 +20,34 @@ public class KeyStore {
     private static final String KEYSTOREALIASPRIVATE = "PRIVATEKEY";
     private static final String KEYSTOREALIASCERTIFICATE = "CERTIFICATE";
 
-    public static KeyPair getCredentials() throws KeyExceptions.NoSuchAlgorithmException{
+    public static KeyPair getCredentials() throws KeyExceptions.GeneralKeyStoreErrorException {
         if (credentials == null) {
             try {
                 credentials = loadKeyPair();
             } catch (FileNotFoundException e ){
-                credentials = KeyTools.getKeyPairGenerator().generateKeyPair();
                 try {
+                    credentials = KeyTools.getKeyPairGenerator().generateKeyPair();
                     X509Certificate crt = CertificateGenerator.generate(credentials ,  "SHA256withRSA"  , "SELF" , 0);
                     saveKeyPair(credentials , crt);
-                } catch (OperatorCreationException | CertificateException | CertIOException ex) {
-                    ex.printStackTrace();
+                } catch (OperatorCreationException | CertificateException | CertIOException | KeyExceptions.NoSuchAlgorithmException ex) {
+                    throw new KeyExceptions.GeneralKeyStoreErrorException();
                 }
             } catch (IOException e){
                 System.out.println("Wrong password!");
                 System.exit(0);
             } catch (Exception e) {
-                e.printStackTrace();
+                throw new KeyExceptions.GeneralKeyStoreErrorException();
 
             }
         }
         return credentials;
     }
 
-    public static PublicKey getPublicKey() throws KeyExceptions.NoSuchAlgorithmException {
+    public static PublicKey getPublicKey() throws KeyExceptions.GeneralKeyStoreErrorException {
         return getCredentials().getPublic();
     }
 
-    public static PrivateKey getPrivateKey() throws KeyExceptions.NoSuchAlgorithmException {
+    public static PrivateKey getPrivateKey() throws KeyExceptions.GeneralKeyStoreErrorException {
         return getCredentials().getPrivate();
     }
 
