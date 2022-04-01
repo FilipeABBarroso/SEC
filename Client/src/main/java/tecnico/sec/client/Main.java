@@ -25,6 +25,15 @@ public class Main {
             System.out.println("Error trying to get credentials...");
             return;
         }
+        System.out.println("What is the server public key");
+        String publicKey = new Scanner(System.in).nextLine();
+        try {
+            Client.serverPubKey = KeyStore.stringToPublicKey(publicKey);
+        } catch (KeyExceptions.GeneralKeyStoreErrorException e) {
+            System.out.println("Server public key not valid...");
+            return;
+        }
+
         while (true) {
             Scanner in = new Scanner(System.in);
             System.out.print("""
@@ -34,7 +43,7 @@ public class Main {
                     4.Receive Amount
                     5.Audit Account
                     0.Leave
-                    Select what you want to do:""");
+                    Select what you want to do : """);
             try {
                 String selected = in.nextLine();
                 switch (Integer.parseInt(selected)) {
