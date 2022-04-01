@@ -2,7 +2,7 @@
 
 ## General Information
 
-chicken nugget?
+This file describes how to set up the project and test it against attacks.
 
 ### Build With
 
@@ -10,10 +10,11 @@ chicken nugget?
 * [Maven](https://maven.apache.org/)
 * [Docker](https://www.docker.com/)
 * [PostgreSQL](https://www.postgresql.org/)
+* [gRPC](https://grpc.io/)
 
 ## Getting Started
 
-In order to get this project up and running... One client per RunTime... keystore file
+In order to get this project up and running you will need to follow the next steps.
 
 ### Prerequisites
 
@@ -36,7 +37,7 @@ Compile Test source code
 mvn compile-test
 ```
 
-### Usage
+## Usage
 
 Start Databases through Docker
 ```
@@ -51,10 +52,14 @@ Start Client
 mvn compile exec:java -Dexec.mainClass="tecnico.sec.server.Main"
 ```
 
-### Demo
+## Demo
 
-In order to demonstrate the mechanisms integrated in the project to tackle security and dependability threats...
-beca beca
+In order to demonstrate the mechanisms integrated in the project to tackle security and dependability threats,
+it is possible to run the tests. In the client the tests were made to test the signature, this is to check
+the message integrity. In the server the tests not only verify the message integrity, but also, for example, to check
+in the send_amount request the nonce sent by the client, and to test against attacks, such as, replay attacks.
+
+To run te tests execute the following line:
 ```
 mvn test
 ```
