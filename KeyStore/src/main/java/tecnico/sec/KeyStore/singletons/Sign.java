@@ -11,7 +11,7 @@ import java.security.*;
 
 public class Sign {
 
-    public static byte[] signMessage(Object ... args) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException {
+    public static byte[] signMessage(Object ... args) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException, KeyExceptions.GeneralKeyStoreErrorException {
         try {
             Signature signature = SignTools.getSignature();
             signature.initSign(KeyStore.getPrivateKey());

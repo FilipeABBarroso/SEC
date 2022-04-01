@@ -50,4 +50,11 @@ public abstract class TransactionsExceptions extends BaseException {
             return Status.PERMISSION_DENIED.withDescription("Balance not enough in your account").asException();
         }
     }
+
+    public static class TransactionAlreadyAcceptedException extends TransactionsExceptions {
+        @Override
+        public Exception toResponseException() {
+            return Status.PERMISSION_DENIED.withDescription("Transaction already accepted").asException();
+        }
+    }
 }

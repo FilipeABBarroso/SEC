@@ -76,11 +76,11 @@ public class Transactions {
         }
     }
 
-    public static void changeStatus(int id, byte[] publicKeyReceiver) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.TransactionIDNotFoundException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, TransactionsExceptions.TransactionPublicKeyReceiverDontMatchException, BalanceExceptions.GeneralMYSQLException {
+    public static void changeStatus(int id, byte[] publicKeyReceiver) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.TransactionIDNotFoundException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, TransactionsExceptions.TransactionPublicKeyReceiverDontMatchException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.TransactionAlreadyAcceptedException {
         try {
             // get receiver public key and amount in the transaction
             Connection conn = DBConnection.getConnection();
-            String pkAndAmount = "SELECT publicKeyReceiver, amount FROM TRANSACTIONS WHERE id=?;";
+            String pkAndAmount = "SELECT publicKeyReceiver, amount, status FROM TRANSACTIONS WHERE id=?;";
             PreparedStatement pkAndAmountPs = conn.prepareStatement(pkAndAmount);
             pkAndAmountPs.setInt(1, id);
             ResultSet pkAndAmountRs = pkAndAmountPs.executeQuery();
@@ -89,6 +89,9 @@ public class Transactions {
             }
             if (!Arrays.equals(publicKeyReceiver, pkAndAmountRs.getBytes("publicKeyReceiver"))) {
                 throw new TransactionsExceptions.TransactionPublicKeyReceiverDontMatchException();
+            }
+            if (pkAndAmountRs.getString("status").equals("Completed")) {
+                throw new TransactionsExceptions.TransactionAlreadyAcceptedException();
             }
 
             conn.setAutoCommit(false);
@@ -122,15 +125,12 @@ public class Transactions {
         ArrayList<String> list = new ArrayList<>();
         try {
             Connection conn = DBConnection.getConnection();
-            String query = "SELECT * FROM TRANSACTIONS WHERE publicKeyReceiver=? AND status=?::statusOptions;";
+            String query = "SELECT publicKeySender, publicKeyReceiver, amount, id FROM TRANSACTIONS WHERE publicKeyReceiver=? AND status=?::statusOptions;";
             PreparedStatement ps = conn.prepareStatement(query);
             ps.setBytes(1, publicKey);
             ps.setString(2, "Pending");
             ResultSet rs = ps.executeQuery();
-            if (!rs.next()) {
-                return list;
-            }
-            while (!rs.next()) {
+            while (rs.next()) {
                 Transaction t = new Transaction(rs.getBytes("publicKeySender"), rs.getBytes("publicKeySender"),
                         rs.getInt("amount"), rs.getInt("id"));
                 list.add(t.toString());
