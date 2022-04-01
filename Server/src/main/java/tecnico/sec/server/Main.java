@@ -9,8 +9,13 @@ import java.io.IOException;
 
 public class Main {
     public static void main(String[] args) throws IOException, InterruptedException, KeyExceptions.GeneralKeyStoreErrorException {
-        KeyStore.changeKeyPath("server/");
-        KeyStore.getCredentials();
+        KeyStore.changeKeyPath("server");
+        try {
+            System.out.println(KeyStore.publicKeyToString(KeyStore.getCredentials().getPublic()));
+        } catch (KeyExceptions.GeneralKeyStoreErrorException e) {
+            System.out.println("Error trying to get credentials...");
+            return;
+        }
         Server server = ServerBuilder
                 .forPort(8080)
                 .addService(new ServiceImpl())

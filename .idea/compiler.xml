@@ -13,8 +13,10 @@
         <module name="proto" />
         <module name="client" />
         <module name="Client" />
-        <module name="KeyStore" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="KeyStore" target="11" />
+    </bytecodeTargetLevel>
   </component>
 </project>

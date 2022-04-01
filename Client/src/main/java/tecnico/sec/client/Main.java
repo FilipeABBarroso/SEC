@@ -18,7 +18,7 @@ import tecnico.sec.proto.exceptions.KeyExceptions;
 public class Main {
 
     public static void main(String[] args) {
-        KeyStore.changeKeyPath("client/");
+        KeyStore.changeKeyPath("client");
         System.out.println("Welcome to BFTB!\n");
         try {
             System.out.println(KeyStore.publicKeyToString(KeyStore.getCredentials().getPublic()));
