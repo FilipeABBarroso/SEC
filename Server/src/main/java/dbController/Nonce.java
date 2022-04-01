@@ -12,7 +12,6 @@ import java.sql.SQLException;
 public class Nonce {
 
     public static int getNonce (byte[] publicKey) throws NonceExceptions.NonceNotFoundException, BalanceExceptions.GeneralMYSQLException {
-        int out = 0;
         try {
             Connection conn = DBConnection.getConnection();
             String query = "SELECT nonce FROM NONCE WHERE publicKey=?;";
@@ -22,11 +21,10 @@ public class Nonce {
             if (!rs.next()) {
                 throw new NonceExceptions.NonceNotFoundException();
             }
-            out = rs.getInt("nonce");
+            return rs.getInt("nonce");
         } catch (SQLException e) {
             throw new BalanceExceptions.GeneralMYSQLException();
         }
-        return out;
     }
 
     public static void createNonce(byte[] publicKey, int nonce) throws NonceExceptions.FailInsertNonceException, BalanceExceptions.GeneralMYSQLException, NonceExceptions.PublicKeyNotFoundException {

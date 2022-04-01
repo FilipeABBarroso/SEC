@@ -10,8 +10,7 @@ import java.sql.SQLException;
 
 public class Balance {
 
-    public static int getBalance(byte[] publicKey) throws NonceExceptions.NonceNotFoundException, BalanceExceptions.PublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException {
-        int balance = 0;
+    public static int getBalance(byte[] publicKey) throws BalanceExceptions.PublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException {
         try {
             Connection conn = DBConnection.getConnection();
             String query = "SELECT * FROM BALANCE WHERE publicKey=?;";
@@ -21,12 +20,11 @@ public class Balance {
             if (!rs.next()) {
                 throw new BalanceExceptions.PublicKeyNotFoundException();
             }
-            balance = rs.getInt("balance");
+            return rs.getInt("balance");
         } catch (SQLException e) {
             System.out.println(e);
             throw new BalanceExceptions.GeneralMYSQLException();
         }
-        return balance;
     }
 
     public static void openAccount(byte[] publicKey) throws BalanceExceptions.PublicKeyAlreadyExistException, BalanceExceptions.GeneralMYSQLException {
