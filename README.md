@@ -62,8 +62,7 @@ the message integrity.
 
 In the server the tests not only verify the message integrity, but also, for example, to check
 in the send_amount request the nonce sent by the client, and to test against attacks, such as, replay attacks.
-To test the endpoints it is tested only one, because there are functions that are difficult to mock, such as, send_amount, and the behaviour of the others are similar, but all the functions/components
-that are not shared were tested alone.
+To test the endpoints we only create testes for one endpoint, because there are functions that are difficult to mock, such as, send_amount due to the existence of randomly generated nonces. So we tested the endpoint open_account for the porpouse of testing the signature operations and the GRPC mechanisms of retriving errors and responses and, in the parts that are diferent between the endpoints we tested it by creating unit tests for every function that we call except the signature ones that we explain early.
 
 To run te tests execute the following line:
 ```
