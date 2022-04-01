@@ -18,8 +18,8 @@ public class Transactions {
         if(amount <= 0 ){
             throw new TransactionsExceptions.AmountCanNotBeLessThenOneException();
         }
-        if(publicKeySender == publicKeyReceiver){
-            throw  new TransactionsExceptions.CanNotSendMoneyToYourselfException();
+        if(Arrays.equals(publicKeySender,publicKeyReceiver)){
+            throw new TransactionsExceptions.CanNotSendMoneyToYourselfException();
         }
 
         try {
