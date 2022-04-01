@@ -9,6 +9,7 @@ import java.io.IOException;
 
 public class Main {
     public static void main(String[] args) throws IOException, InterruptedException, KeyExceptions.GeneralKeyStoreErrorException {
+        KeyStore.changeKeyPath("server/");
         KeyStore.getCredentials();
         Server server = ServerBuilder
                 .forPort(8080)

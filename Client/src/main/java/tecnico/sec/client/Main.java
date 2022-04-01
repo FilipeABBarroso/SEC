@@ -8,6 +8,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
 import java.util.Scanner;
 
+import com.google.protobuf.ByteString;
 import com.google.protobuf.ProtocolStringList;
 import org.javatuples.Pair;
 import tecnico.sec.KeyStore.singletons.KeyStore;
@@ -17,10 +18,10 @@ import tecnico.sec.proto.exceptions.KeyExceptions;
 public class Main {
 
     public static void main(String[] args) {
+        KeyStore.changeKeyPath("client/");
         System.out.println("Welcome to BFTB!\n");
         try {
             System.out.println(KeyStore.publicKeyToString(KeyStore.getCredentials().getPublic()));
-            //System.out.println(Base64.getEncoder().encodeToString(KeyStore.getCredentials().getPrivate().getEncoded()));
         } catch (KeyExceptions.GeneralKeyStoreErrorException e) {
             System.out.println("Error trying to get credentials...");
             return;

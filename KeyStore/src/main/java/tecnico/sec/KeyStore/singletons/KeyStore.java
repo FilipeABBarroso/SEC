@@ -8,6 +8,7 @@ import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Scanner;
@@ -16,9 +17,13 @@ public class KeyStore {
 
     private static KeyPair credentials;
 
-    private static final String KEYSTOREPATH = "";
+    private static String KEYSTOREPATH = "";
     private static final String KEYSTOREALIASPRIVATE = "PRIVATEKEY";
     private static final String KEYSTOREALIASCERTIFICATE = "CERTIFICATE";
+
+    public static void changeKeyPath(String path){
+        KEYSTOREPATH = path;
+    }
 
     public static KeyPair getCredentials() throws KeyExceptions.GeneralKeyStoreErrorException {
         if (credentials == null) {
@@ -92,9 +97,10 @@ public class KeyStore {
     }
 
     public static PrivateKey stringToPrivateKey(String publicKeyString) throws KeyExceptions.GeneralKeyStoreErrorException {
+
         try {
             byte[] publicBytes = Base64.getDecoder().decode(publicKeyString);
-            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
+            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(publicBytes);
             KeyFactory keyFactory = KeyFactory.getInstance("RSA");
             return keyFactory.generatePrivate(keySpec);
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e ) {
