@@ -20,7 +20,7 @@ public class Main {
         System.out.println("Welcome to BFTB!\n");
         try {
             System.out.println(KeyStore.publicKeyToString(KeyStore.getCredentials().getPublic()));
-            System.out.println(Base64.getEncoder().encodeToString(KeyStore.getCredentials().getPrivate().getEncoded()));
+            //System.out.println(Base64.getEncoder().encodeToString(KeyStore.getCredentials().getPrivate().getEncoded()));
         } catch (KeyExceptions.GeneralKeyStoreErrorException e) {
             System.out.println("Error trying to get credentials...");
             return;
