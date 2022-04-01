@@ -7,7 +7,6 @@ import io.grpc.Status;
 
 import io.grpc.StatusRuntimeException;
 import org.javatuples.Pair;
-import tecnico.sec.KeyStore.singletons.KeyStore;
 import tecnico.sec.grpc.*;
 import tecnico.sec.proto.exceptions.BaseException;
 import tecnico.sec.proto.exceptions.IOExceptions;
@@ -18,16 +17,15 @@ import static tecnico.sec.KeyStore.singletons.Sign.checkSignature;
 import static tecnico.sec.KeyStore.singletons.Sign.signMessage;
 
 import java.security.*;
-import java.security.spec.InvalidKeySpecException;
-import java.util.Arrays;
+
 
 public class Client {
 
-    private static final String serverPubKey = "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAxuJj/x4gUFuHguIRySzf9NY2OI4mPQgMaJ9/A7YPd/XTeLn0bxxReM7iC9ymkZgijZlEN1BPqVfRrLK0waYqmAzwNcr+4GZd2PnAdhnuf7cRAkILsoESJZHxyyNUYY8aOVaAxUOFiIc5nqEsdQ50Kia06vLb3Mg1h4zvmp3pIsxJqsjasOl8fSRe4LRF1SVtdlCsMW9DgyuPZVeS8KASbnzbkpxrk7fZk+ddU7eoIh2nXeqzGTVKC3TXq1yWYCaSDB4/F06ibShSQfAoMPQ5ncu9t3ox5e1jX7uEqCjYtskPr8k8zudgyndgQq6iHLLh6SYMJhhgGHMKDT0hB6mRpjA1pk7v4UR8v5sIQIPVB0VZDU05LlPtrl+rz1aauTfHCoiZyCJlO8KmX8g2zwCB1eUgAjeLnwLfPrPwwCjJkCQuYsDUsqvBSon8sPILsoWOJkyNK52S8ObR3iNdu7LLF39kWtsNaVgwmX+Qwul4JR33pL8e4cUiGMzLS1kmXJ5kIgQXN5d5PInDibyHlvg7SUFQqVZFcjiaNyCHDwYpz5P6o9R/5t+M8NMUMCskqMXJvElNoabnzB02szpB3Gp/Gl2A+41xSE+81c8h7dYz1Egl5tU2FEKDm2IQCfZ0TlgnYv1TY59aAt3YZym6xfyQ7Vt8sSMEhQClJg2Wu7Q3RS8CAwEAAQ==";
+    public static PublicKey serverPubKey;
+    // "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAxuJj/x4gUFuHguIRySzf9NY2OI4mPQgMaJ9/A7YPd/XTeLn0bxxReM7iC9ymkZgijZlEN1BPqVfRrLK0waYqmAzwNcr+4GZd2PnAdhnuf7cRAkILsoESJZHxyyNUYY8aOVaAxUOFiIc5nqEsdQ50Kia06vLb3Mg1h4zvmp3pIsxJqsjasOl8fSRe4LRF1SVtdlCsMW9DgyuPZVeS8KASbnzbkpxrk7fZk+ddU7eoIh2nXeqzGTVKC3TXq1yWYCaSDB4/F06ibShSQfAoMPQ5ncu9t3ox5e1jX7uEqCjYtskPr8k8zudgyndgQq6iHLLh6SYMJhhgGHMKDT0hB6mRpjA1pk7v4UR8v5sIQIPVB0VZDU05LlPtrl+rz1aauTfHCoiZyCJlO8KmX8g2zwCB1eUgAjeLnwLfPrPwwCjJkCQuYsDUsqvBSon8sPILsoWOJkyNK52S8ObR3iNdu7LLF39kWtsNaVgwmX+Qwul4JR33pL8e4cUiGMzLS1kmXJ5kIgQXN5d5PInDibyHlvg7SUFQqVZFcjiaNyCHDwYpz5P6o9R/5t+M8NMUMCskqMXJvElNoabnzB02szpB3Gp/Gl2A+41xSE+81c8h7dYz1Egl5tU2FEKDm2IQCfZ0TlgnYv1TY59aAt3YZym6xfyQ7Vt8sSMEhQClJg2Wu7Q3RS8CAwEAAQ==";
 
     public static boolean open_account(PublicKey key) {
         byte[] pubKeyField = key.getEncoded();
-        System.out.println(Arrays.toString(pubKeyField));
         byte[] signature;
         try {
             signature = signMessage(pubKeyField);
@@ -48,7 +46,7 @@ public class Client {
         }
         try {
             //checkSignature(KeyStore.stringToPublicKey(serverPubKey).getEncoded(), openAccountResponse.getSignature().toByteArray(),pubKeyField);
-            openAccountCheckResponse(KeyStore.stringToPublicKey(serverPubKey).getEncoded(), openAccountResponse.getSignature().toByteArray(),pubKeyField);
+            openAccountCheckResponse(serverPubKey.getEncoded(), openAccountResponse.getSignature().toByteArray(),pubKeyField);
             return true;
         } catch (BaseException e) {
             Status status = Status.fromThrowable(e);
@@ -99,7 +97,7 @@ public class Client {
         }
         try {
             //checkSignature(KeyStore.stringToPublicKey(serverPubKey).getEncoded(), sendAmountResponse.getSignature().toByteArray(), sourceField,destinationField,amount,nonce+1);
-            sendAmountCheckResponse(KeyStore.stringToPublicKey(serverPubKey).getEncoded(), sendAmountResponse.getSignature().toByteArray(), sourceField,destinationField,amount,nonce+1);
+            sendAmountCheckResponse(serverPubKey.getEncoded(), sendAmountResponse.getSignature().toByteArray(), sourceField,destinationField,amount,nonce+1);
             return true;
         } catch (BaseException e) {
             Status status = Status.fromThrowable(e);
@@ -136,7 +134,7 @@ public class Client {
         }
         try {
             //checkSignature(KeyStore.stringToPublicKey(serverPubKey).getEncoded(), receiveAmountResponse.getSignature().toByteArray(), pubKeyField,transactionID);
-            receiveAmountCheckResponse(KeyStore.stringToPublicKey(serverPubKey).getEncoded(), receiveAmountResponse.getSignature().toByteArray(), pubKeyField,transactionID);
+            receiveAmountCheckResponse(serverPubKey.getEncoded(), receiveAmountResponse.getSignature().toByteArray(), pubKeyField,transactionID);
             return true;
         } catch (BaseException e) {
             Status status = Status.fromThrowable(e);
@@ -162,7 +160,7 @@ public class Client {
         }
         try {
             //checkSignature(KeyStore.stringToPublicKey(serverPubKey).getEncoded(), checkAccountResponse.getSignature().toByteArray(), checkAccountResponse.getBalance(), checkAccountResponse.getTransactionsList().toArray());
-            checkAccountCheckResponse(KeyStore.stringToPublicKey(serverPubKey).getEncoded(), checkAccountResponse.getSignature().toByteArray(), checkAccountResponse.getBalance(), checkAccountResponse.getTransactionsList().toArray());
+            checkAccountCheckResponse(serverPubKey.getEncoded(), checkAccountResponse.getSignature().toByteArray(), checkAccountResponse.getBalance(), checkAccountResponse.getTransactionsList().toArray());
             return Pair.with(checkAccountResponse.getBalance(),checkAccountResponse.getTransactionsList());
         } catch (BaseException e) {
             Status status = Status.fromThrowable(e);
@@ -187,13 +185,18 @@ public class Client {
             return null;
         }
         try {
-            checkSignature(KeyStore.stringToPublicKey(serverPubKey).getEncoded(), auditResponse.getSignature().toByteArray(), auditResponse.getTransactionsList().toArray());
+            //checkSignature(serverPubKey.getEncoded(), auditResponse.getSignature().toByteArray(), auditResponse.getTransactionsList().toArray());
+            auditCheckResponse(serverPubKey.getEncoded(), auditResponse.getSignature().toByteArray(), auditResponse.getTransactionsList().toArray());
             return auditResponse.getTransactionsList();
         } catch (BaseException e) {
             Status status = Status.fromThrowable(e);
             System.out.println("CLIENT ERROR : " + status.getCode() + " : " + status.getDescription());
         }
         return null;
+    }
+
+    public static void auditCheckResponse(byte[] serverPublicKey, byte[] signature, Object[] transactionList) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, SignatureExceptions.SignatureDoNotMatchException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException {
+        checkSignature(serverPublicKey, signature, transactionList);
     }
 
 }
