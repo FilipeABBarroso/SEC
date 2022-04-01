@@ -49,7 +49,7 @@ class BalanceTest {
     }
 
     @Test
-    void creatUserReplyAttack() throws BalanceExceptions.PublicKeyAlreadyExistException, BalanceExceptions.GeneralMYSQLException {
+    void creatUserReplayAttack() throws BalanceExceptions.PublicKeyAlreadyExistException, BalanceExceptions.GeneralMYSQLException {
         Balance.openAccount(NOTCREATEDUSER);
         assertThrows(BalanceExceptions.PublicKeyAlreadyExistException.class , () -> Balance.openAccount(NOTCREATEDUSER));
     }

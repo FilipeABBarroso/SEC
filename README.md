@@ -62,13 +62,62 @@ the message integrity.
 
 In the server the tests not only verify the message integrity, but also, for example, to check
 in the send_amount request the nonce sent by the client, and to test against attacks, such as, replay attacks.
-To test the endpoints it is tested only one, because there are functions difficult to mock the data, such as, send_amount, and the behaviour of the others are similar, but all the functions/components
+To test the endpoints it is tested only one, because there are functions that are difficult to mock, such as, send_amount, and the behaviour of the others are similar, but all the functions/components
 that are not shared were tested alone.
 
 To run te tests execute the following line:
 ```
 mvn test
 ```
+
+Client tests : 
+
+* open_account_normal
+* open_account_key_signature_mismatch
+* send_amount_normal
+* send_amount_signature_mismatch
+* send_amount_nonce_mismatch
+* receive_amount_normal
+* receive_amount_signature_mismatch
+* check_account_normal
+* check_account_signature_mismatch
+* audit_normal
+* audit_signature_mismatch
+
+Server tests : 
+* creatUserNormalUse
+* creatUserThatAlreadyIsCreated
+* creatUserReplayAttack
+* getBalanceNormalUse
+* getBalancePublicKeyNotFound
+
+* openAccount
+* openAccountUserAlreadyExists
+* openAccountSignatureDoNotMatch
+* openAccountNoParams
+
+* getNonce
+* getNonceThatDoesNotExist
+* getNonceReplayAttack
+* creatNonce
+* creatNonceThatAlreadyExist
+* creatNonceWithAUnregisteredAccount
+
+* addTransaction
+* addTransactionWithZeroAmount
+* addTransactionWithNegativeAmount
+* addTransactionNotCreatedSender
+* addTransactionNotCreatedReceiver
+* addTransactionSenderAndReceiverAreTheSame
+* addTransactionSenderDoesNotHaveBalance
+* changeStatus
+* changeStatusIDNotFound
+* changeStatusIDDoesNotBelongToYou
+* changeStatusNotCreatedUser
+* changeStatusReplayAttack
+* getPendingTransactions
+* getPendingTransactionsNoTransactions
+* getPendingTransactionsNotCreatedUser
 
 ## Additional Information
 

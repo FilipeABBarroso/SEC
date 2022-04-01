@@ -51,7 +51,7 @@ class NonceTest {
     }
 
     @Test
-    void getNonceReplyAttack() throws NonceExceptions.NonceNotFoundException, BalanceExceptions.GeneralMYSQLException, NonceExceptions.PublicKeyNotFoundException, NonceExceptions.FailInsertNonceException, NonceExceptions.NonceAlreadyExistsException {
+    void getNonceReplayAttack() throws NonceExceptions.NonceNotFoundException, BalanceExceptions.GeneralMYSQLException, NonceExceptions.PublicKeyNotFoundException, NonceExceptions.FailInsertNonceException, NonceExceptions.NonceAlreadyExistsException {
         Nonce.createNonce(CREATEDUSER , NONCE);
         int get1 = Nonce.getNonce(CREATEDUSER);
         int get2 = Nonce.getNonce(CREATEDUSER);
