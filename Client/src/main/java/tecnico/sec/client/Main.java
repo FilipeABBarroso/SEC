@@ -5,6 +5,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 
+import java.util.Base64;
 import java.util.Scanner;
 
 import com.google.protobuf.ProtocolStringList;
@@ -19,6 +20,7 @@ public class Main {
         System.out.println("Welcome to BFTB!\n");
         try {
             System.out.println(KeyStore.publicKeyToString(KeyStore.getCredentials().getPublic()));
+            System.out.println(Base64.getEncoder().encodeToString(KeyStore.getCredentials().getPrivate().getEncoded()));
         } catch (KeyExceptions.GeneralKeyStoreErrorException e) {
             System.out.println("Error trying to get credentials...");
             return;
@@ -75,7 +77,7 @@ public class Main {
         PublicKey destinationPubKey;
         try {
             destinationPubKey = KeyStore.stringToPublicKey(destination);
-        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+        } catch (KeyExceptions.GeneralKeyStoreErrorException e) {
             System.out.println("Public key not valid!");
             return;
         }

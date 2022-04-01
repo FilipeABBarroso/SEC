@@ -24,6 +24,8 @@ public class Sign {
             throw new SignatureExceptions.CanNotSignException();
         } catch (InvalidKeyException e) {
             throw new KeyExceptions.InvalidPublicKeyException();
+        } catch (KeyExceptions.GeneralKeyStoreErrorException e) {
+            throw new KeyExceptions.GeneralKeyStoreErrorException();
         }
     }
 

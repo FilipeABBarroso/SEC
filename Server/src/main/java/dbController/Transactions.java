@@ -151,15 +151,13 @@ public class Transactions {
             ps.setBytes(1, publicKey);
             ps.setBytes(2, publicKey);
             ResultSet rs = ps.executeQuery();
-            if (!rs.next()) {
-                throw new TransactionsExceptions.PublicKeyNotFoundException();
-            }
-            while (!rs.next()) {
+            while (rs.next()) {
                 Transaction t = new Transaction(rs.getBytes("publicKeySender"), rs.getBytes("publicKeySender"),
                         rs.getInt("amount"), rs.getInt("id"));
                 list.add(t.toString());
             }
         } catch (SQLException e) {
+            System.out.println(e);
             throw new BalanceExceptions.GeneralMYSQLException();
         }
         return list;

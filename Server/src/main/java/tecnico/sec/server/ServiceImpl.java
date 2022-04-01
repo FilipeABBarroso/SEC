@@ -111,17 +111,11 @@ public class ServiceImpl extends ServiceImplBase {
         byte[] publicKey = request.getPublicKey().toByteArray();
 
         try {
-            int balance = Balance.getBalance(publicKey);
             List<String> transactions = Transactions.getTransactions(publicKey);
-
-            byte[] signedFields = Sign.signMessage(balance , transactions);
             AuditResponse.Builder builder = AuditResponse.newBuilder();
+            builder.addAllTransactions(transactions);
+            byte[] signedFields = Sign.signMessage(builder.getTransactionsList().toArray());
             builder.setSignature(ByteString.copyFrom(signedFields));
-            int count = 0;
-            for(String t : transactions){
-                builder.setTransactions(count , t);
-                count++;
-            }
             responseObserver.onNext(builder.build());
             responseObserver.onCompleted();
         } catch (BaseException e) {

@@ -25,9 +25,9 @@ public class ServerConnection {
         }
         while( channel.getState(true) != ConnectivityState.READY && channel.getState(true) != ConnectivityState.IDLE){
             System.out.println(channel.getState(true));
-            System.out.println("Trying again to connect in 10 seconds...");
+            System.out.println("Trying again to connect in 5 seconds...");
             try {
-                Thread.sleep(10000);
+                Thread.sleep(5000);
             } catch (InterruptedException e) {
                 System.out.println("Error in wait");
             }

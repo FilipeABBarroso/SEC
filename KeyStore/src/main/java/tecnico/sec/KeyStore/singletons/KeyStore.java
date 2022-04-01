@@ -43,6 +43,10 @@ public class KeyStore {
         return credentials;
     }
 
+    public static void setCredentials(String publicKey, String privateKey) throws KeyExceptions.GeneralKeyStoreErrorException {
+        credentials = new KeyPair(stringToPublicKey(publicKey),stringToPrivateKey(privateKey));
+    }
+
     public static PublicKey getPublicKey() throws KeyExceptions.GeneralKeyStoreErrorException {
         return getCredentials().getPublic();
     }
@@ -75,11 +79,28 @@ public class KeyStore {
         return "";
     }
 
-    public static PublicKey stringToPublicKey(String publicKeyString) throws NoSuchAlgorithmException, InvalidKeySpecException {
-        byte[] publicBytes = Base64.getDecoder().decode(publicKeyString);
-        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        return keyFactory.generatePublic(keySpec);
+    public static PublicKey stringToPublicKey(String publicKeyString) throws KeyExceptions.GeneralKeyStoreErrorException {
+        try {
+            byte[] publicBytes = Base64.getDecoder().decode(publicKeyString);
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            return keyFactory.generatePublic(keySpec);
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e ) {
+            throw new KeyExceptions.GeneralKeyStoreErrorException();
+        }
+
+    }
+
+    public static PrivateKey stringToPrivateKey(String publicKeyString) throws KeyExceptions.GeneralKeyStoreErrorException {
+        try {
+            byte[] publicBytes = Base64.getDecoder().decode(publicKeyString);
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            return keyFactory.generatePrivate(keySpec);
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e ) {
+            throw new KeyExceptions.GeneralKeyStoreErrorException();
+        }
+
     }
 
     private static char[] requestPassword(){
