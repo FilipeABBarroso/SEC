@@ -27,7 +27,7 @@ public class Nonce {
         }
     }
 
-    public static void createNonce(byte[] publicKey, int nonce) throws NonceExceptions.FailInsertNonceException, BalanceExceptions.GeneralMYSQLException, NonceExceptions.PublicKeyNotFoundException {
+    public static void createNonce(byte[] publicKey, int nonce) throws NonceExceptions.FailInsertNonceException, BalanceExceptions.GeneralMYSQLException, NonceExceptions.PublicKeyNotFoundException, NonceExceptions.NonceAlreadyExistsException {
         try {
             Connection conn = DBConnection.getConnection();
             String query = "INSERT INTO NONCE (publicKey,nonce) " + "VALUES (?,?);";
@@ -38,12 +38,14 @@ public class Nonce {
                 throw new NonceExceptions.FailInsertNonceException();
             }
         } catch (SQLException e) {
-            System.out.println(e);
-            if (e.getSQLState().equals(Constants.DUPLICATED_KEY) || e.getSQLState().equals(Constants.FOREIGN_KEY_DONT_EXISTS)) {
+            if (e.getSQLState().equals(Constants.FOREIGN_KEY_DONT_EXISTS)) {
                 throw new NonceExceptions.PublicKeyNotFoundException();
-            } else {
-                throw new BalanceExceptions.GeneralMYSQLException();
             }
+            if ( e.getSQLState().equals(Constants.DUPLICATED_KEY)){
+                throw new NonceExceptions.NonceAlreadyExistsException();
+            }
+            throw new BalanceExceptions.GeneralMYSQLException();
+
         }
     }
 }

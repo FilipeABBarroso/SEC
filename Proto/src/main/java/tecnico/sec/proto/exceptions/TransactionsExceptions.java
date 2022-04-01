@@ -57,4 +57,18 @@ public abstract class TransactionsExceptions extends BaseException {
             return Status.PERMISSION_DENIED.withDescription("Transaction already accepted").asException();
         }
     }
+
+    public static class AmountCanNotBeLessThenOneException extends TransactionsExceptions {
+        @Override
+        public Exception toResponseException() {
+            return Status.INVALID_ARGUMENT.withDescription("The amount can not be less then 1").asException();
+        }
+    }
+
+    public static class CanNotSendMoneyToYourselfException extends TransactionsExceptions{
+        @Override
+        public Exception toResponseException() {
+            return Status.INVALID_ARGUMENT.withDescription("Can not send amount to yourself").asException();
+        }
+    }
 }

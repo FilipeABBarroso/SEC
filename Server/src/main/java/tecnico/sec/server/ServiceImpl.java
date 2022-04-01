@@ -27,7 +27,7 @@ public class ServiceImpl extends ServiceImplBase {
             nonce = random.nextInt();
             try {
                 Nonce.createNonce(publicKey , nonce);
-            } catch (NonceExceptions.FailInsertNonceException | BalanceExceptions.GeneralMYSQLException | NonceExceptions.PublicKeyNotFoundException ex) {
+            } catch (BaseException ex) {
                 responseObserver.onError(ex);
             }
         }

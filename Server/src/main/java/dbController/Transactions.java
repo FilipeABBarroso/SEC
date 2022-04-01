@@ -14,7 +14,14 @@ import java.util.List;
 
 public class Transactions {
 
-    public static void addTransaction(byte[] publicKeySender, byte[] publicKeyReceiver, int amount) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.FailInsertTransactionException, TransactionsExceptions.SenderPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.PublicKeyNotFoundException, TransactionsExceptions.BalanceNotEnoughException, TransactionsExceptions.ReceiverPublicKeyNotFoundException {
+    public static void addTransaction(byte[] publicKeySender, byte[] publicKeyReceiver, int amount) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.FailInsertTransactionException, TransactionsExceptions.SenderPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.PublicKeyNotFoundException, TransactionsExceptions.BalanceNotEnoughException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, TransactionsExceptions.AmountCanNotBeLessThenOneException, TransactionsExceptions.CanNotSendMoneyToYourselfException {
+        if(amount <= 0 ){
+            throw new TransactionsExceptions.AmountCanNotBeLessThenOneException();
+        }
+        if(publicKeySender == publicKeyReceiver){
+            throw  new TransactionsExceptions.CanNotSendMoneyToYourselfException();
+        }
+
         try {
             Connection conn = DBConnection.getConnection();
 
@@ -57,14 +64,12 @@ public class Transactions {
             String removeNonceQuery = "DELETE from NONCE where publicKey=?;";
             PreparedStatement removeNoncePs = conn.prepareStatement(removeNonceQuery);
             removeNoncePs.setBytes(1, publicKeySender);
-            if (removeNoncePs.executeUpdate() == 0) {
-                throw new TransactionsExceptions.SenderPublicKeyNotFoundException();
-            }
+            removeNoncePs.executeUpdate();
 
             conn.commit();
         } catch (SQLException e) {
             if (e.getSQLState().equals(Constants.FOREIGN_KEY_DONT_EXISTS)) {
-                if (e.getMessage().contains("Receiver")){
+                if (e.getMessage().contains("receiver")){
                     throw new TransactionsExceptions.ReceiverPublicKeyNotFoundException();
                 } else {
                     throw new TransactionsExceptions.SenderPublicKeyNotFoundException();
@@ -76,7 +81,13 @@ public class Transactions {
         }
     }
 
-    public static void changeStatus(int id, byte[] publicKeyReceiver) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.TransactionIDNotFoundException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, TransactionsExceptions.TransactionPublicKeyReceiverDontMatchException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.TransactionAlreadyAcceptedException {
+    public static void changeStatus(int id, byte[] publicKeyReceiver) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.TransactionIDNotFoundException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, TransactionsExceptions.TransactionPublicKeyReceiverDontMatchException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.TransactionAlreadyAcceptedException, TransactionsExceptions.PublicKeyNotFoundException {
+        try {
+            Balance.getBalance(publicKeyReceiver);
+        }catch (BalanceExceptions.PublicKeyNotFoundException e ){
+            throw new TransactionsExceptions.PublicKeyNotFoundException();
+        }
+
         try {
             // get receiver public key and amount in the transaction
             Connection conn = DBConnection.getConnection();
@@ -121,8 +132,13 @@ public class Transactions {
         }
     }
 
-    public static List<String> getPendingTransactions(byte[] publicKey) throws TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException {
+    public static List<String> getPendingTransactions(byte[] publicKey) throws TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.PublicKeyNotFoundException {
         ArrayList<String> list = new ArrayList<>();
+        try {
+            Balance.getBalance(publicKey);
+        }catch (BalanceExceptions.PublicKeyNotFoundException e ){
+            throw new TransactionsExceptions.PublicKeyNotFoundException();
+        }
         try {
             Connection conn = DBConnection.getConnection();
             String query = "SELECT publicKeySender, publicKeyReceiver, amount, id FROM TRANSACTIONS WHERE publicKeyReceiver=? AND status=?::statusOptions;";

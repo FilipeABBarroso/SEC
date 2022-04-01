@@ -17,7 +17,19 @@ public class DBConnection {
             System.err.println(e.getClass().getName()+": "+e.getMessage());
             System.exit(0);
         }
-        System.out.println("Opened database successfully");
+    }
+
+    public static void testDB() {
+        try {
+            Class.forName("org.postgresql.Driver");
+            connection = DriverManager
+                    .getConnection("jdbc:postgresql://localhost:5433/SECDatabaseTest",
+                            "postgres", "postgres");
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println(e.getClass().getName()+": "+e.getMessage());
+            System.exit(0);
+        }
     }
 
     public static Connection getConnection() {

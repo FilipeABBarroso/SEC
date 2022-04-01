@@ -24,4 +24,11 @@ public abstract class NonceExceptions extends BaseException{
             return Status.NOT_FOUND.withDescription("Public key not found in nonce").asException();
         }
     }
+
+    public static class NonceAlreadyExistsException extends TransactionsExceptions {
+        @Override
+        public Exception toResponseException() {
+            return Status.ALREADY_EXISTS.asException();
+        }
+    }
 }
