@@ -23,30 +23,30 @@ In order to get this project up and running... One client per RunTime... keystor
 
 ### Setup
 
-beca builds e merdas
+Clean and install dependencies
 ```
 mvn clean install
 ```
-beca builds e merdas
+Compile source code
 ```
 mvn compile
 ```
-beca builds e merdas
+Compile Test source code
 ```
 mvn compile-test
 ```
 
 ### Usage
 
-Docker a correr beca
+Start Databases through Docker
 ```
 docker-compose up
 ```
-Start server beca
+Start Server
 ```
 mvn compile exec:java -Dexec.mainClass="tecnico.sec.client.Main"
 ```
-Start a client beca
+Start Client
 ```
 mvn compile exec:java -Dexec.mainClass="tecnico.sec.server.Main"
 ```
