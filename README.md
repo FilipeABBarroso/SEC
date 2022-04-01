@@ -55,9 +55,15 @@ mvn compile exec:java -Dexec.mainClass="tecnico.sec.server.Main"
 ## Demo
 
 In order to demonstrate the mechanisms integrated in the project to tackle security and dependability threats,
-it is possible to run the tests. In the client the tests were made to test the signature, this is to check
-the message integrity. In the server the tests not only verify the message integrity, but also, for example, to check
+it is possible to run the tests.
+
+In the client the tests were made to test the signature, this is to check
+the message integrity.
+
+In the server the tests not only verify the message integrity, but also, for example, to check
 in the send_amount request the nonce sent by the client, and to test against attacks, such as, replay attacks.
+To test the endpoints it is tested only one, because there are functions difficult to mock the data, such as, send_amount, and the behaviour of the others are similar, but all the functions/components
+that are not shared were tested alone.
 
 To run te tests execute the following line:
 ```
