@@ -1,5 +1,7 @@
 package dbController;
 
+import tecnico.sec.KeyStore.singletons.KeyStore;
+
 import java.util.Arrays;
 
 public class Transaction {
@@ -33,7 +35,7 @@ public class Transaction {
 
     @Override
     public String toString() {
-        return "[" + id + "]" + " amount: " + amount + ", From: " +
-                Arrays.toString(publicKeySender) + " -> To: " + Arrays.toString(getPublicKeyReceiver);
+        return "[" + id + "]" + " amount: " + amount + "\nFrom: " +
+                KeyStore.byteArrayToString(publicKeySender) + "\nTo: " + KeyStore.byteArrayToString(getPublicKeyReceiver) + "\n";
     }
 }

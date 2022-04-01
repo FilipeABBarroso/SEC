@@ -14,11 +14,24 @@ import java.util.List;
 
 public class Transactions {
 
-    public static void addTransaction(byte[] publicKeySender, byte[] publicKeyReceiver, int amount) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.FailInsertTransactionException, TransactionsExceptions.SenderPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.PublicKeyNotFoundException {
+    public static void addTransaction(byte[] publicKeySender, byte[] publicKeyReceiver, int amount) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.FailInsertTransactionException, TransactionsExceptions.SenderPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.PublicKeyNotFoundException, TransactionsExceptions.BalanceNotEnoughException, TransactionsExceptions.ReceiverPublicKeyNotFoundException {
         try {
             Connection conn = DBConnection.getConnection();
-            conn.setAutoCommit(false);
 
+            // Check if sender has enough
+            String checkBalanceQuery = "SELECT balance FROM BALANCE WHERE publicKey=?;";
+            PreparedStatement checkBalancePS = conn.prepareStatement(checkBalanceQuery);
+            checkBalancePS.setBytes(1, publicKeySender);
+            ResultSet checkBalanceRS = checkBalancePS.executeQuery();
+            if(!checkBalanceRS.next()) {
+                throw new TransactionsExceptions.SenderPublicKeyNotFoundException();
+            } else {
+                if (checkBalanceRS.getInt("balance") < amount){
+                    throw new TransactionsExceptions.BalanceNotEnoughException();
+                }
+            }
+
+            conn.setAutoCommit(false);
             // Add transaction
             String query = "INSERT INTO TRANSACTIONS (publicKeySender,publicKeyReceiver,amount,status) " + "VALUES (?,?,?,?::statusOptions);";
             PreparedStatement ps = conn.prepareStatement(query);
@@ -31,7 +44,7 @@ public class Transactions {
             }
 
             // update sender balance
-            int updatedBalance = Balance.getBalance(publicKeySender) + amount;
+            int updatedBalance = Balance.getBalance(publicKeySender) - amount;
             String secondQuery = "UPDATE BALANCE set balance = ? where publicKey=?;";
             PreparedStatement balancePs = conn.prepareStatement(secondQuery);
             balancePs.setInt(1, updatedBalance);
@@ -51,18 +64,23 @@ public class Transactions {
             conn.commit();
         } catch (SQLException e) {
             if (e.getSQLState().equals(Constants.FOREIGN_KEY_DONT_EXISTS)) {
-                throw new TransactionsExceptions.PublicKeyNotFoundException();
+                if (e.getMessage().contains("Receiver")){
+                    throw new TransactionsExceptions.ReceiverPublicKeyNotFoundException();
+                } else {
+                    throw new TransactionsExceptions.SenderPublicKeyNotFoundException();
+                }
+
             } else {
                 throw new BalanceExceptions.GeneralMYSQLException();
             }
         }
     }
 
-    public static void changeStatus(int id, byte[] publicKeyReceiver) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.TransactionIDNotFoundException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, TransactionsExceptions.TransactionPublicKeyReceiverDontMatchException, BalanceExceptions.GeneralMYSQLException {
+    public static void changeStatus(int id, byte[] publicKeyReceiver) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.TransactionIDNotFoundException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, TransactionsExceptions.TransactionPublicKeyReceiverDontMatchException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.TransactionAlreadyAcceptedException {
         try {
             // get receiver public key and amount in the transaction
             Connection conn = DBConnection.getConnection();
-            String pkAndAmount = "SELECT publicKeyReceiver, amount FROM TRANSACTIONS WHERE id=?;";
+            String pkAndAmount = "SELECT publicKeyReceiver, amount, status FROM TRANSACTIONS WHERE id=?;";
             PreparedStatement pkAndAmountPs = conn.prepareStatement(pkAndAmount);
             pkAndAmountPs.setInt(1, id);
             ResultSet pkAndAmountRs = pkAndAmountPs.executeQuery();
@@ -71,6 +89,9 @@ public class Transactions {
             }
             if (!Arrays.equals(publicKeyReceiver, pkAndAmountRs.getBytes("publicKeyReceiver"))) {
                 throw new TransactionsExceptions.TransactionPublicKeyReceiverDontMatchException();
+            }
+            if (pkAndAmountRs.getString("status").equals("Completed")) {
+                throw new TransactionsExceptions.TransactionAlreadyAcceptedException();
             }
 
             conn.setAutoCommit(false);
@@ -104,15 +125,12 @@ public class Transactions {
         ArrayList<String> list = new ArrayList<>();
         try {
             Connection conn = DBConnection.getConnection();
-            String query = "SELECT * FROM TRANSACTIONS WHERE publicKeyReceiver=? AND status=?::statusOptions;";
+            String query = "SELECT publicKeySender, publicKeyReceiver, amount, id FROM TRANSACTIONS WHERE publicKeyReceiver=? AND status=?::statusOptions;";
             PreparedStatement ps = conn.prepareStatement(query);
             ps.setBytes(1, publicKey);
             ps.setString(2, "Pending");
             ResultSet rs = ps.executeQuery();
-            if (!rs.next()) {
-                throw new TransactionsExceptions.ReceiverPublicKeyNotFoundException();
-            }
-            while (!rs.next()) {
+            while (rs.next()) {
                 Transaction t = new Transaction(rs.getBytes("publicKeySender"), rs.getBytes("publicKeySender"),
                         rs.getInt("amount"), rs.getInt("id"));
                 list.add(t.toString());

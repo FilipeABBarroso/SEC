@@ -92,13 +92,8 @@ public class ServiceImpl extends ServiceImplBase {
         try {
             int balance = Balance.getBalance(publicKey);
             List<String> transactions = Transactions.getPendingTransactions(publicKey);
-
             CheckAccountResponse.Builder builder = CheckAccountResponse.newBuilder();
-            int count = 0;
-            for(String t : transactions){
-                builder.setTransactions(count , t);
-                count++;
-            }
+            builder.addAllTransactions(transactions);
             builder.setBalance(balance);
             byte[] signedFields = Sign.signMessage(balance , builder.getTransactionsList().toArray());
             builder.setSignature(ByteString.copyFrom(signedFields));

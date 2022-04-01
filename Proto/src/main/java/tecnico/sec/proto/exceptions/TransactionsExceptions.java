@@ -43,4 +43,18 @@ public abstract class TransactionsExceptions extends BaseException {
             return Status.INVALID_ARGUMENT.withDescription("Receiver public key don't match").asException();
         }
     }
+
+    public static class BalanceNotEnoughException extends TransactionsExceptions {
+        @Override
+        public Exception toResponseException() {
+            return Status.PERMISSION_DENIED.withDescription("Balance not enough in your account").asException();
+        }
+    }
+
+    public static class TransactionAlreadyAcceptedException extends TransactionsExceptions {
+        @Override
+        public Exception toResponseException() {
+            return Status.PERMISSION_DENIED.withDescription("Transaction already accepted").asException();
+        }
+    }
 }

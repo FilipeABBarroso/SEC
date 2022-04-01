@@ -63,6 +63,18 @@ public class KeyStore {
         return Base64.getEncoder().encodeToString(publicKey.getEncoded());
     }
 
+    public static String byteArrayToString(byte[] publicKey) {
+        try {
+            PublicKey inPublicKey = toPublicKey(publicKey);
+            return publicKeyToString(inPublicKey);
+        } catch (KeyExceptions.InvalidPublicKeyException e) {
+            e.printStackTrace();
+        } catch (KeyExceptions.NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        return "";
+    }
+
     public static PublicKey stringToPublicKey(String publicKeyString) throws NoSuchAlgorithmException, InvalidKeySpecException {
         byte[] publicBytes = Base64.getDecoder().decode(publicKeyString);
         X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
