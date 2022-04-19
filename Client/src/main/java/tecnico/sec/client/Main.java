@@ -1,18 +1,10 @@
 package tecnico.sec.client;
 
-
-import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
-import java.security.spec.InvalidKeySpecException;
-
-import java.util.Base64;
 import java.util.Scanner;
-
-import com.google.protobuf.ByteString;
 import com.google.protobuf.ProtocolStringList;
 import org.javatuples.Pair;
 import tecnico.sec.KeyStore.singletons.KeyStore;
-
 import tecnico.sec.proto.exceptions.KeyExceptions;
 
 public class Main {
