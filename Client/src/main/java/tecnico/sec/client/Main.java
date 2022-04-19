@@ -69,15 +69,11 @@ public class Main {
     }
 
     public static void open_account_request(){
-        try {
-            if(Client.open_account(KeyStore.getPublicKey())){
+            if(Client.open_account()){
                 System.out.println("Account opened!");
             } else {
                 System.out.println("Failed to open account!");
             }
-        } catch (KeyExceptions.GeneralKeyStoreErrorException e) {
-            e.printStackTrace();
-        }
     }
 
     public static void send_amount_request() {
@@ -93,15 +89,10 @@ public class Main {
         }
         System.out.println("How much you want to send?");
         int amount = in.nextInt();
-
-        try {
-            if(Client.send_amount(KeyStore.getPublicKey(), destinationPubKey, amount)){
-                System.out.println("Amount sent!");
-            } else {
-                System.out.println("Failed to send amount!");
-            }
-        } catch (KeyExceptions.GeneralKeyStoreErrorException e) {
-            e.printStackTrace();
+        if(Client.send_amount(destinationPubKey, amount)){
+            System.out.println("Amount sent!");
+        } else {
+            System.out.println("Failed to send amount!");
         }
     }
 
@@ -109,25 +100,15 @@ public class Main {
         Scanner in = new Scanner(System.in);
         System.out.println("What transactionID you want to receive?");
         int transactionID = in.nextInt();
-
-        try {
-            if(Client.receive_amount(KeyStore.getPublicKey(), transactionID)) {
-                System.out.println("Amount received!");
-            } else {
-                System.out.println("Failed to receive amount!");
-            }
-        } catch (KeyExceptions.GeneralKeyStoreErrorException e) {
-            e.printStackTrace();
+        if(Client.receive_amount(transactionID)) {
+            System.out.println("Amount received!");
+        } else {
+            System.out.println("Failed to receive amount!");
         }
     }
 
     public static void check_account_request() {
-        Pair<Integer,ProtocolStringList> res = null;
-        try {
-            res = Client.check_account(KeyStore.getPublicKey());
-        } catch (KeyExceptions.GeneralKeyStoreErrorException e) {
-            e.printStackTrace();
-        }
+        Pair<Integer,ProtocolStringList> res = Client.check_account();
         if (res!=null) {
             System.out.println("Balance : " + res.getValue0());
             listTransactions(res.getValue1());
@@ -137,12 +118,17 @@ public class Main {
     }
 
     public static void audit_request() {
-        ProtocolStringList res = null;
+        Scanner in = new Scanner(System.in);
+        System.out.println("Who do you want to audit?");
+        String destination = in.nextLine();
+        PublicKey destinationPubKey;
         try {
-            res = Client.audit(KeyStore.getPublicKey());
-        }catch (KeyExceptions.GeneralKeyStoreErrorException e) {
-            e.printStackTrace();
+            destinationPubKey = KeyStore.stringToPublicKey(destination);
+        } catch (KeyExceptions.GeneralKeyStoreErrorException e) {
+            System.out.println("Public key not valid!");
+            return;
         }
+        ProtocolStringList res = Client.audit(destinationPubKey);
         if(res != null){
             listTransactions(res);
         } else {

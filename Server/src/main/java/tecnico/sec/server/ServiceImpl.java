@@ -19,26 +19,29 @@ public class ServiceImpl extends ServiceImplBase {
     @Override
     public void getNonce(NonceRequest request, StreamObserver<NonceResponse> responseObserver) {
         byte[] publicKey = request.getPublicKey().toByteArray();
-        int nonce;
+
         try {
-            nonce = Nonce.getNonce(publicKey);
+            int nonce = Nonce.getNonce(publicKey);
+            responseObserver.onNext(NonceResponse.newBuilder().setNonce(nonce).build());
+            responseObserver.onCompleted();
         } catch (NonceExceptions.NonceNotFoundException | BalanceExceptions.GeneralMYSQLException e) {
             SecureRandom random = new SecureRandom();
-            nonce = random.nextInt();
+            int nonce = random.nextInt();
+            responseObserver.onNext(NonceResponse.newBuilder().setNonce(nonce).build());
+            responseObserver.onCompleted();
             try {
                 Nonce.createNonce(publicKey , nonce);
             } catch (BaseException ex) {
                 responseObserver.onError(ex);
             }
         }
-        responseObserver.onNext(NonceResponse.newBuilder().setNonce(nonce).build());
-        responseObserver.onCompleted();
     }
 
     @Override
     public void openAccount(OpenAccountRequest request, StreamObserver<OpenAccountResponse> responseObserver) {
         byte[] publicKey = request.getPublicKey().toByteArray();
         byte[] signature = request.getSignature().toByteArray();
+
         try {
             Sign.checkSignature(publicKey, signature, publicKey);
             Balance.openAccount(publicKey);
@@ -57,6 +60,7 @@ public class ServiceImpl extends ServiceImplBase {
         int amount = request.getAmount();
         int nonce = request.getNonce();
         byte[] signature = request.getSignature().toByteArray();
+
         try {
             Sign.checkSignature(publicKeySource, signature, publicKeySource , publicKeyDestination , amount , nonce);
             Transactions.addTransaction(publicKeySource , publicKeyDestination , amount);
@@ -97,11 +101,9 @@ public class ServiceImpl extends ServiceImplBase {
             builder.setBalance(balance);
             byte[] signedFields = Sign.signMessage(balance , builder.getTransactionsList().toArray());
             builder.setSignature(ByteString.copyFrom(signedFields));
-
             responseObserver.onNext(builder.build());
             responseObserver.onCompleted();
         } catch (BaseException e) {
-            System.out.println(e);
             responseObserver.onError(e.toResponseException());
         }
     }
