@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS Transactions(
     publicKeyReceiver bytea,
     amount integer,
     status statusOptions NOT NULL,
+    nonce integer,
+    signature bytea,
     id serial PRIMARY KEY,
     FOREIGN KEY (publicKeySender)
         REFERENCES Balance (publicKey),

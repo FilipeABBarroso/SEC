@@ -11,11 +11,14 @@ import java.sql.SQLException;
 
 public class Nonce {
 
-    public static int getNonce (byte[] publicKey) throws NonceExceptions.NonceNotFoundException, BalanceExceptions.GeneralMYSQLException {
-        try {
-            Connection conn = DBConnection.getConnection();
-            String query = "SELECT nonce FROM NONCE WHERE publicKey=?;";
-            PreparedStatement ps = conn.prepareStatement(query);
+    synchronized public static int getNonce (byte[] publicKey) throws NonceExceptions.NonceNotFoundException, BalanceExceptions.GeneralMYSQLException {
+        Connection conn = DBConnection.getConnection();
+
+        String query = "SELECT nonce FROM NONCE WHERE publicKey=?;";
+
+
+        try (PreparedStatement ps = conn.prepareStatement(query))
+        {
             ps.setBytes(1, publicKey);
             ResultSet rs = ps.executeQuery();
             if (!rs.next()) {
@@ -27,11 +30,13 @@ public class Nonce {
         }
     }
 
-    public static void createNonce(byte[] publicKey, int nonce) throws NonceExceptions.FailInsertNonceException, BalanceExceptions.GeneralMYSQLException, NonceExceptions.PublicKeyNotFoundException, NonceExceptions.NonceAlreadyExistsException {
-        try {
-            Connection conn = DBConnection.getConnection();
-            String query = "INSERT INTO NONCE (publicKey,nonce) " + "VALUES (?,?);";
-            PreparedStatement ps = conn.prepareStatement(query);
+    synchronized public static void createNonce(byte[] publicKey, int nonce) throws NonceExceptions.FailInsertNonceException, BalanceExceptions.GeneralMYSQLException, NonceExceptions.PublicKeyNotFoundException, NonceExceptions.NonceAlreadyExistsException {
+        Connection conn = DBConnection.getConnection();
+
+        String query = "INSERT INTO NONCE (publicKey,nonce) " + "VALUES (?,?);";
+
+        try (PreparedStatement ps = conn.prepareStatement(query))
+        {
             ps.setBytes(1, publicKey);
             ps.setInt(2, nonce);
             if(ps.executeUpdate() == 0) {
