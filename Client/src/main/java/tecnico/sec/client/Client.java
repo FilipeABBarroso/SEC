@@ -2,6 +2,7 @@ package tecnico.sec.client;
 
 import com.google.protobuf.ByteString;
 import io.grpc.Status;
+
 import io.grpc.StatusRuntimeException;
 import org.javatuples.Pair;
 
