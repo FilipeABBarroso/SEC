@@ -22,18 +22,18 @@ import java.security.*;
 
 public class Client {
 
-    public static PublicKey serverPubKey;
-
     public static boolean open_account() {
         try {
             PublicKey publicKey = KeyStore.getPublicKey();
             byte[] pubKeyField = publicKey.getEncoded();
             byte[] signature = signMessage(pubKeyField);
-            OpenAccountResponse openAccountResponse = ServerConnection.getConnection().broadCastOpenAccount(OpenAccountRequest.newBuilder()
-                    .setPublicKey(ByteString.copyFrom(pubKeyField))
-                    .setSignature(ByteString.copyFrom(signature))
-                    .build());
-            openAccountCheckResponse(serverPubKey.getEncoded(), openAccountResponse.getSignature().toByteArray(),pubKeyField);
+            for(Pair<ServiceGrpc.ServiceBlockingStub, PublicKey> server : ServerConnection.getConnection()) {
+                OpenAccountResponse openAccountResponse = server.getValue0().openAccount(OpenAccountRequest.newBuilder()
+                        .setPublicKey(ByteString.copyFrom(pubKeyField))
+                        .setSignature(ByteString.copyFrom(signature))
+                        .build());
+                openAccountCheckResponse(server.getValue1().getEncoded(), openAccountResponse.getSignature().toByteArray(), pubKeyField);
+            }
             return true;
         } catch (StatusRuntimeException | BaseException e) {
             Status status = Status.fromThrowable(e);
@@ -50,18 +50,20 @@ public class Client {
         try {
             PublicKey source = KeyStore.getPublicKey();
             byte[] sourceField = source.getEncoded();
-            NonceResponse nonceResponse = ServerConnection.getConnection().getNonce(NonceRequest.newBuilder().setPublicKey(ByteString.copyFrom(sourceField)).build());
-            int nonce = nonceResponse.getNonce();
-            byte[] destinationField = destination.getEncoded();
-            byte[] signature = signMessage(sourceField, destinationField, amount, nonce);
-            SendAmountResponse sendAmountResponse = ServerConnection.getConnection().sendAmount(SendAmountRequest.newBuilder()
-                    .setPublicKeySource(ByteString.copyFrom(sourceField))
-                    .setPublicKeyDestination(ByteString.copyFrom(destinationField))
-                    .setAmount(amount)
-                    .setNonce(nonce)
-                    .setSignature(ByteString.copyFrom(signature))
-                    .build());
-            sendAmountCheckResponse(serverPubKey.getEncoded(), sendAmountResponse.getSignature().toByteArray(), sourceField,destinationField,amount,nonce+1);
+            for(Pair<ServiceGrpc.ServiceBlockingStub, PublicKey> server : ServerConnection.getConnection()) {
+                NonceResponse nonceResponse = server.getValue0().getNonce(NonceRequest.newBuilder().setPublicKey(ByteString.copyFrom(sourceField)).build());
+                int nonce = nonceResponse.getNonce();
+                byte[] destinationField = destination.getEncoded();
+                byte[] signature = signMessage(sourceField, destinationField, amount, nonce);
+                SendAmountResponse sendAmountResponse = server.getValue0().sendAmount(SendAmountRequest.newBuilder()
+                        .setPublicKeySource(ByteString.copyFrom(sourceField))
+                        .setPublicKeyDestination(ByteString.copyFrom(destinationField))
+                        .setAmount(amount)
+                        .setNonce(nonce)
+                        .setSignature(ByteString.copyFrom(signature))
+                        .build());
+                sendAmountCheckResponse(server.getValue1().getEncoded(), sendAmountResponse.getSignature().toByteArray(), sourceField, destinationField, amount, nonce + 1);
+            }
             return true;
         } catch (StatusRuntimeException | BaseException e) {
             Status status = Status.fromThrowable(e);
@@ -79,12 +81,14 @@ public class Client {
             PublicKey pubKey = KeyStore.getPublicKey();
             byte[] pubKeyField = pubKey.getEncoded();
             byte[] signature = signMessage(pubKeyField, transactionID);
-            ReceiveAmountResponse receiveAmountResponse = ServerConnection.getConnection().receiveAmount(ReceiveAmountRequest.newBuilder()
-                    .setPublicKey(ByteString.copyFrom(pubKeyField))
-                    .setTransactionID(transactionID)
-                    .setSignature(ByteString.copyFrom(signature))
-                    .build());
-            receiveAmountCheckResponse(serverPubKey.getEncoded(), receiveAmountResponse.getSignature().toByteArray(), pubKeyField,transactionID);
+            for(Pair<ServiceGrpc.ServiceBlockingStub, PublicKey> server : ServerConnection.getConnection()) {
+                ReceiveAmountResponse receiveAmountResponse = server.getValue0().receiveAmount(ReceiveAmountRequest.newBuilder()
+                        .setPublicKey(ByteString.copyFrom(pubKeyField))
+                        .setTransactionID(transactionID)
+                        .setSignature(ByteString.copyFrom(signature))
+                        .build());
+                receiveAmountCheckResponse(server.getValue1().getEncoded(), receiveAmountResponse.getSignature().toByteArray(), pubKeyField, transactionID);
+            }
             return true;
         } catch (BaseException e) {
             Status status = Status.fromThrowable(e);
@@ -101,11 +105,14 @@ public class Client {
         try {
             PublicKey pubKey = KeyStore.getPublicKey();
             byte[] pubKeyField = pubKey.getEncoded();
-            CheckAccountResponse checkAccountResponse = ServerConnection.getConnection().checkAccount(CheckAccountRequest.newBuilder()
-                    .setPublicKey(ByteString.copyFrom(pubKeyField))
-                    .build());
-            checkAccountCheckResponse(serverPubKey.getEncoded(), checkAccountResponse.getSignature().toByteArray(), checkAccountResponse.getBalance(), checkAccountResponse.getTransactionsList().toArray());
-            return Pair.with(checkAccountResponse.getBalance(),checkAccountResponse.getTransactionsList());
+            CheckAccountResponse checkAccountResponse = null;
+            for (Pair<ServiceGrpc.ServiceBlockingStub, PublicKey> server : ServerConnection.getConnection()) {
+                checkAccountResponse = server.getValue0().checkAccount(CheckAccountRequest.newBuilder()
+                        .setPublicKey(ByteString.copyFrom(pubKeyField))
+                        .build());
+                checkAccountCheckResponse(server.getValue1().getEncoded(), checkAccountResponse.getSignature().toByteArray(), checkAccountResponse.getBalance(), checkAccountResponse.getTransactionsList().toArray());
+            }
+            return Pair.with(checkAccountResponse.getBalance(), checkAccountResponse.getTransactionsList());
         } catch (StatusRuntimeException | BaseException e) {
             Status status = Status.fromThrowable(e);
             System.out.println("ERROR : " + status.getCode() + " : " + status.getDescription());
@@ -119,11 +126,15 @@ public class Client {
 
     public static ProtocolStringList audit(PublicKey key) {
         try {
-            AuditResponse auditResponse = ServerConnection.getConnection().audit(AuditRequest.newBuilder()
-                    .setPublicKey(ByteString.copyFrom(key.getEncoded()))
-                    .build());
-            auditCheckResponse(serverPubKey.getEncoded(), auditResponse.getSignature().toByteArray(), auditResponse.getTransactionsList().toArray());
-            return auditResponse.getTransactionsList();
+            ProtocolStringList list = null;
+            for (Pair<ServiceGrpc.ServiceBlockingStub, PublicKey> server : ServerConnection.getConnection()) {
+                AuditResponse auditResponse = server.getValue0().audit(AuditRequest.newBuilder()
+                        .setPublicKey(ByteString.copyFrom(key.getEncoded()))
+                        .build());
+                auditCheckResponse(server.getValue1().getEncoded(), auditResponse.getSignature().toByteArray(), auditResponse.getTransactionsList().toArray());
+                auditResponse.getTransactionsList().forEach( (x) -> {if(!list.contains(x)) list.add(x);});
+            }
+            return list;
         } catch (BaseException | StatusRuntimeException e) {
             Status status = Status.fromThrowable(e);
             System.out.println("ERROR : " + status.getCode() + " : " + status.getDescription());

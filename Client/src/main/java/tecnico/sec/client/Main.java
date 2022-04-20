@@ -18,14 +18,6 @@ public class Main {
             System.out.println("Error trying to get credentials...");
             return;
         }
-        System.out.println("What is the server public key");
-        String publicKey = new Scanner(System.in).nextLine();
-        try {
-            Client.serverPubKey = KeyStore.stringToPublicKey(publicKey);
-        } catch (KeyExceptions.GeneralKeyStoreErrorException e) {
-            System.out.println("Server public key not valid...");
-            return;
-        }
 
         while (true) {
             Scanner in = new Scanner(System.in);
