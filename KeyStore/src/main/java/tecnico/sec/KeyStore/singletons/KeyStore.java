@@ -4,6 +4,7 @@ import org.bouncycastle.cert.CertIOException;
 import org.bouncycastle.operator.OperatorCreationException;
 import tecnico.sec.proto.exceptions.KeyExceptions;
 import java.io.*;
+import java.nio.file.Path;
 import java.security.*;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -31,9 +32,7 @@ public class KeyStore {
                 credentials = loadKeyPair();
             } catch (FileNotFoundException e ){
                 try {
-                    credentials = KeyTools.getKeyPairGenerator().generateKeyPair();
-                    X509Certificate crt = CertificateGenerator.generate(credentials ,  "SHA256withRSA"  , "SELF" , 0);
-                    saveKeyPair(credentials , crt);
+                    generateKeyStore();
                 } catch (OperatorCreationException | CertificateException | CertIOException | KeyExceptions.NoSuchAlgorithmException ex) {
                     throw new KeyExceptions.GeneralKeyStoreErrorException();
                 }
@@ -46,6 +45,12 @@ public class KeyStore {
             }
         }
         return credentials;
+    }
+
+    public static void generateKeyStore() throws KeyExceptions.NoSuchAlgorithmException, CertificateException, OperatorCreationException, CertIOException {
+        credentials = KeyTools.getKeyPairGenerator().generateKeyPair();
+        X509Certificate crt = CertificateGenerator.generate(credentials ,  "SHA256withRSA"  , "SELF" , 0);
+        saveKeyPair(credentials , crt);
     }
 
     public static void setCredentials(String publicKey, String privateKey) throws KeyExceptions.GeneralKeyStoreErrorException {
@@ -110,13 +115,10 @@ public class KeyStore {
     }
 
     private static char[] requestPassword(){
-        Console console = System.console();
-        if(console != null){
-            return console.readPassword("Enter your secret password: ");
+        if(System.getenv().get("PASSWORD") == null){
+            return "admin".toCharArray();
         }
-        System.out.print("Enter your secret password: ");
-        Scanner s = new Scanner(System.in);
-        return s.nextLine().toCharArray();
+        return System.getenv().get("PASSWORD").toCharArray();
     }
 
     private static void saveKeyPair(KeyPair keyPair , X509Certificate cert){

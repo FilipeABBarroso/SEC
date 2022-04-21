@@ -8,7 +8,7 @@ import tecnico.sec.proto.exceptions.KeyExceptions;
 import java.io.IOException;
 
 public class Main {
-    public static void main(String[] args) throws IOException, InterruptedException, KeyExceptions.GeneralKeyStoreErrorException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         KeyStore.changeKeyPath("server");
         try {
             System.out.println(KeyStore.publicKeyToString(KeyStore.getCredentials().getPublic()));
@@ -21,6 +21,7 @@ public class Main {
                 .addService(new ServiceImpl())
                 .build();
         server.start();
+        System.out.println("Running...");
         server.awaitTermination();
     }
 }

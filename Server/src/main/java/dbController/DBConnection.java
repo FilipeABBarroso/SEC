@@ -10,7 +10,7 @@ public class DBConnection {
         try {
             Class.forName("org.postgresql.Driver");
             connection = DriverManager
-                    .getConnection("jdbc:postgresql://localhost:5432/SECDatabase",
+                    .getConnection("jdbc:postgresql://database:5432/SECDatabase",
                             "postgres", "postgres");
         } catch (Exception e) {
             e.printStackTrace();
