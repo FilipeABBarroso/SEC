@@ -27,10 +27,10 @@ public class ServerConnection {
             File myObj = new File("servers.txt");
             Scanner myReader = new Scanner(myObj);
             while (myReader.hasNextLine()) {
-                String[] data = myReader.nextLine().split(" ");
+                String[] data = myReader.nextLine().split("-");
                 try {
-                    PublicKey publicKey = KeyStore.stringToPublicKey(data[2]);
-                    servers.add(Pair.with(replicaConnection(data[0], Integer.parseInt(data[1])), publicKey));
+                    PublicKey publicKey = KeyStore.stringToPublicKey(data[1]);
+                    servers.add(Pair.with(replicaConnection("localhost", Integer.parseInt(data[0])), publicKey));
                 } catch (BaseException e) {
                     Status status = Status.fromThrowable(e);
                     System.out.println("ERROR : " + status.getCode() + " : " + status.getDescription());
