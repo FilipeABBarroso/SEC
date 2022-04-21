@@ -18,8 +18,8 @@ import java.util.Scanner;
 
 public class ServerConnection {
 
-    private static List<Pair<ServiceGrpc.ServiceBlockingStub, PublicKey>> servers;
-
+    private static List<Pair<ServiceGrpc.ServiceStub, PublicKey>> servers;
+    private static int count;
 
     private static void initConnection(){
         servers = new ArrayList<>();
@@ -37,20 +37,21 @@ public class ServerConnection {
                 }
             }
             myReader.close();
+            count = servers.size();
         } catch (FileNotFoundException e) {
             System.out.println("File not found");
         }
     }
 
-    private static ServiceGrpc.ServiceBlockingStub replicaConnection(String host, int port) {
+    private static ServiceGrpc.ServiceStub replicaConnection(String host, int port) {
         ManagedChannel channel = ManagedChannelBuilder
                 .forAddress(host, port)
                 .usePlaintext()
                 .build();
-        return ServiceGrpc.newBlockingStub(channel);
+        return ServiceGrpc.newStub(channel); //todo executors
     }
 
-    public static List<Pair<ServiceGrpc.ServiceBlockingStub, PublicKey>> getConnection() {
+    public static List<Pair<ServiceGrpc.ServiceStub, PublicKey>> getConnection() {
         if(servers == null){
             initConnection();
         }
@@ -65,6 +66,10 @@ public class ServerConnection {
             }
         }*/
         return servers;
+    }
+
+    public static int getServerCount(){
+        return count;
     }
 
 }
