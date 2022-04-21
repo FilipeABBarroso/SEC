@@ -10,11 +10,13 @@ import java.sql.SQLException;
 
 public class Balance {
 
-    public static int getBalance(byte[] publicKey) throws BalanceExceptions.PublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException {
-        try {
-            Connection conn = DBConnection.getConnection();
-            String query = "SELECT * FROM BALANCE WHERE publicKey=?;";
-            PreparedStatement ps = conn.prepareStatement(query);
+    synchronized public static int getBalance(byte[] publicKey) throws BalanceExceptions.PublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException {
+        Connection conn = DBConnection.getConnection();
+
+        String query = "SELECT * FROM BALANCE WHERE publicKey=?;";
+
+        try (PreparedStatement ps = conn.prepareStatement(query))
+        {
             ps.setBytes(1, publicKey);
             ResultSet rs = ps.executeQuery();
             if (!rs.next()) {
@@ -27,12 +29,14 @@ public class Balance {
         }
     }
 
-    public static void openAccount(byte[] publicKey) throws BalanceExceptions.PublicKeyAlreadyExistException, BalanceExceptions.GeneralMYSQLException {
-        try {
+    synchronized public static void openAccount(byte[] publicKey) throws BalanceExceptions.PublicKeyAlreadyExistException, BalanceExceptions.GeneralMYSQLException {
+        Connection conn = DBConnection.getConnection();
+
+        String query = "INSERT INTO BALANCE (publicKey,balance) " + "VALUES (?,?);";
+
+        try (PreparedStatement ps = conn.prepareStatement(query))
+        {
             int initialBalance = 1000;
-            Connection conn = DBConnection.getConnection();
-            String query = "INSERT INTO BALANCE (publicKey,balance) " + "VALUES (?,?);";
-            PreparedStatement ps = conn.prepareStatement(query);
             ps.setBytes(1, publicKey);
             ps.setInt(2, initialBalance);
             if (ps.executeUpdate() == 0) {

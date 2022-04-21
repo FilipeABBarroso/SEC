@@ -14,7 +14,7 @@ import java.util.List;
 
 public class Transactions {
 
-    public static void addTransaction(byte[] publicKeySender, byte[] publicKeyReceiver, int amount) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.FailInsertTransactionException, TransactionsExceptions.SenderPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.PublicKeyNotFoundException, TransactionsExceptions.BalanceNotEnoughException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, TransactionsExceptions.AmountCanNotBeLessThenOneException, TransactionsExceptions.CanNotSendMoneyToYourselfException {
+    synchronized public static void addTransaction(byte[] publicKeySender, byte[] publicKeyReceiver, int amount, int nonce, byte[] signature) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.FailInsertTransactionException, TransactionsExceptions.SenderPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.PublicKeyNotFoundException, TransactionsExceptions.BalanceNotEnoughException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, TransactionsExceptions.AmountCanNotBeLessThenOneException, TransactionsExceptions.CanNotSendMoneyToYourselfException {
         if(amount <= 0 ){
             throw new TransactionsExceptions.AmountCanNotBeLessThenOneException();
         }
@@ -22,12 +22,22 @@ public class Transactions {
             throw new TransactionsExceptions.CanNotSendMoneyToYourselfException();
         }
 
-        try {
-            Connection conn = DBConnection.getConnection();
+        Connection conn = DBConnection.getConnection();
+
+        String checkBalanceQuery = "SELECT balance FROM BALANCE WHERE publicKey=?;";
+        String query = "INSERT INTO TRANSACTIONS (publicKeySender,publicKeyReceiver,amount,status,nonce,signature) " + "VALUES (?,?,?,?::statusOptions,?,?);";
+        String secondQuery = "UPDATE BALANCE set balance = ? where publicKey=?;";
+        String removeNonceQuery = "DELETE from NONCE where publicKey=?;";
+
+
+        try (PreparedStatement checkBalancePS = conn.prepareStatement(checkBalanceQuery);
+             PreparedStatement ps = conn.prepareStatement(query);
+             PreparedStatement balancePs = conn.prepareStatement(secondQuery);
+             PreparedStatement removeNoncePs = conn.prepareStatement(removeNonceQuery))
+        {
+
 
             // Check if sender has enough
-            String checkBalanceQuery = "SELECT balance FROM BALANCE WHERE publicKey=?;";
-            PreparedStatement checkBalancePS = conn.prepareStatement(checkBalanceQuery);
             checkBalancePS.setBytes(1, publicKeySender);
             ResultSet checkBalanceRS = checkBalancePS.executeQuery();
             if(!checkBalanceRS.next()) {
@@ -40,20 +50,18 @@ public class Transactions {
 
             conn.setAutoCommit(false);
             // Add transaction
-            String query = "INSERT INTO TRANSACTIONS (publicKeySender,publicKeyReceiver,amount,status) " + "VALUES (?,?,?,?::statusOptions);";
-            PreparedStatement ps = conn.prepareStatement(query);
             ps.setBytes(1, publicKeySender);
             ps.setBytes(2, publicKeyReceiver);
             ps.setInt(3, amount);
             ps.setString(4, "Pending");
+            ps.setInt(5, nonce);
+            ps.setBytes(6, signature);
             if(ps.executeUpdate() == 0) {
                 throw new TransactionsExceptions.FailInsertTransactionException();
             }
 
             // update sender balance
             int updatedBalance = Balance.getBalance(publicKeySender) - amount;
-            String secondQuery = "UPDATE BALANCE set balance = ? where publicKey=?;";
-            PreparedStatement balancePs = conn.prepareStatement(secondQuery);
             balancePs.setInt(1, updatedBalance);
             balancePs.setBytes(2, publicKeySender);
             if (balancePs.executeUpdate() == 0) {
@@ -61,8 +69,6 @@ public class Transactions {
             }
 
             // remove sender nonce
-            String removeNonceQuery = "DELETE from NONCE where publicKey=?;";
-            PreparedStatement removeNoncePs = conn.prepareStatement(removeNonceQuery);
             removeNoncePs.setBytes(1, publicKeySender);
             removeNoncePs.executeUpdate();
 
@@ -81,18 +87,25 @@ public class Transactions {
         }
     }
 
-    public static void changeStatus(int id, byte[] publicKeyReceiver) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.TransactionIDNotFoundException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, TransactionsExceptions.TransactionPublicKeyReceiverDontMatchException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.TransactionAlreadyAcceptedException, TransactionsExceptions.PublicKeyNotFoundException {
+    synchronized public static void changeStatus(int id, byte[] publicKeyReceiver) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.TransactionIDNotFoundException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, TransactionsExceptions.TransactionPublicKeyReceiverDontMatchException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.TransactionAlreadyAcceptedException, TransactionsExceptions.PublicKeyNotFoundException {
         try {
             Balance.getBalance(publicKeyReceiver);
         }catch (BalanceExceptions.PublicKeyNotFoundException e ){
             throw new TransactionsExceptions.PublicKeyNotFoundException();
         }
 
-        try {
+        Connection conn = DBConnection.getConnection();
+
+        String pkAndAmount = "SELECT publicKeyReceiver, amount, status FROM TRANSACTIONS WHERE id=?;";
+        String query = "UPDATE TRANSACTIONS set status = ?::statusOptions where id=?;";
+        String secondQuery = "UPDATE BALANCE set balance = ? where publicKey=?;";
+
+
+        try (PreparedStatement pkAndAmountPs = conn.prepareStatement(pkAndAmount);
+             PreparedStatement ps = conn.prepareStatement(query);
+             PreparedStatement secondPs = conn.prepareStatement(secondQuery))
+        {
             // get receiver public key and amount in the transaction
-            Connection conn = DBConnection.getConnection();
-            String pkAndAmount = "SELECT publicKeyReceiver, amount, status FROM TRANSACTIONS WHERE id=?;";
-            PreparedStatement pkAndAmountPs = conn.prepareStatement(pkAndAmount);
             pkAndAmountPs.setInt(1, id);
             ResultSet pkAndAmountRs = pkAndAmountPs.executeQuery();
             if (!pkAndAmountRs.next()) {
@@ -108,8 +121,6 @@ public class Transactions {
             conn.setAutoCommit(false);
 
             // change transaction status to completed
-            String query = "UPDATE TRANSACTIONS set status = ?::statusOptions where id=?;";
-            PreparedStatement ps = conn.prepareStatement(query);
             ps.setString(1, "Completed");
             ps.setInt(2, id);
             if (ps.executeUpdate() == 0) {
@@ -118,8 +129,6 @@ public class Transactions {
 
             // update receiver balance
             int updatedBalance = Balance.getBalance(pkAndAmountRs.getBytes("publicKeyReceiver")) + pkAndAmountRs.getInt("amount");
-            String secondQuery = "UPDATE BALANCE set balance = ? where publicKey=?;";
-            PreparedStatement secondPs = conn.prepareStatement(secondQuery);
             secondPs.setInt(1, updatedBalance);
             secondPs.setBytes(2, pkAndAmountRs.getBytes("publicKeyReceiver"));
             if (secondPs.executeUpdate() == 0) {
@@ -132,17 +141,20 @@ public class Transactions {
         }
     }
 
-    public static List<String> getPendingTransactions(byte[] publicKey) throws TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.PublicKeyNotFoundException {
+    synchronized public static List<String> getPendingTransactions(byte[] publicKey) throws TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.PublicKeyNotFoundException {
         ArrayList<String> list = new ArrayList<>();
         try {
             Balance.getBalance(publicKey);
         }catch (BalanceExceptions.PublicKeyNotFoundException e ){
             throw new TransactionsExceptions.PublicKeyNotFoundException();
         }
-        try {
-            Connection conn = DBConnection.getConnection();
-            String query = "SELECT publicKeySender, publicKeyReceiver, amount, id FROM TRANSACTIONS WHERE publicKeyReceiver=? AND status=?::statusOptions;";
-            PreparedStatement ps = conn.prepareStatement(query);
+
+        Connection conn = DBConnection.getConnection();
+
+        String query = "SELECT publicKeySender, publicKeyReceiver, amount, id FROM TRANSACTIONS WHERE publicKeyReceiver=? AND status=?::statusOptions;";
+
+        try (PreparedStatement ps = conn.prepareStatement(query))
+        {
             ps.setBytes(1, publicKey);
             ps.setString(2, "Pending");
             ResultSet rs = ps.executeQuery();
@@ -158,12 +170,15 @@ public class Transactions {
         return list;
     }
 
-    public static List<String> getTransactions(byte[] publicKey) throws TransactionsExceptions.ReceiverPublicKeyNotFoundException, TransactionsExceptions.PublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException {
+    synchronized public static List<String> getTransactions(byte[] publicKey) throws TransactionsExceptions.ReceiverPublicKeyNotFoundException, TransactionsExceptions.PublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException {
         ArrayList<String> list = new ArrayList<>();
-        try {
-            Connection conn = DBConnection.getConnection();
-            String query = "SELECT * FROM TRANSACTIONS WHERE publicKeyReceiver=? or publicKeySender=?;";
-            PreparedStatement ps = conn.prepareStatement(query);
+
+        Connection conn = DBConnection.getConnection();
+
+        String query = "SELECT * FROM TRANSACTIONS WHERE publicKeyReceiver=? or publicKeySender=?;";
+
+        try (PreparedStatement ps = conn.prepareStatement(query))
+        {
             ps.setBytes(1, publicKey);
             ps.setBytes(2, publicKey);
             ResultSet rs = ps.executeQuery();
