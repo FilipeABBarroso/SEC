@@ -63,7 +63,7 @@ public class ServiceImpl extends ServiceImplBase {
 
         try {
             Sign.checkSignature(publicKeySource, signature, publicKeySource , publicKeyDestination , amount , nonce);
-            Transactions.addTransaction(publicKeySource , publicKeyDestination , amount);
+            Transactions.addTransaction(publicKeySource , publicKeyDestination , amount , nonce , signature);
             byte[] signedIncrementedNonce = Sign.signMessage(publicKeySource , publicKeyDestination , amount , nonce + 1);
             responseObserver.onNext(SendAmountResponse.newBuilder().setSignature(ByteString.copyFrom(signedIncrementedNonce)).build());
             responseObserver.onCompleted();
