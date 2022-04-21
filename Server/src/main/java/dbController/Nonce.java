@@ -14,13 +14,9 @@ public class Nonce {
     synchronized public static int getNonce (byte[] publicKey) throws NonceExceptions.NonceNotFoundException, BalanceExceptions.GeneralMYSQLException {
         Connection conn = DBConnection.getConnection();
 
-        String query = "SELECT nonce FROM NONCE WHERE publicKey=?;";
-
-
-        try (PreparedStatement ps = conn.prepareStatement(query))
-        {
-            ps.setBytes(1, publicKey);
-            ResultSet rs = ps.executeQuery();
+        try {
+            PreparedStatements.getNoncePS().setBytes(1, publicKey);
+            ResultSet rs = PreparedStatements.getNoncePS().executeQuery();
             if (!rs.next()) {
                 throw new NonceExceptions.NonceNotFoundException();
             }
@@ -33,13 +29,10 @@ public class Nonce {
     synchronized public static void createNonce(byte[] publicKey, int nonce) throws NonceExceptions.FailInsertNonceException, BalanceExceptions.GeneralMYSQLException, NonceExceptions.PublicKeyNotFoundException, NonceExceptions.NonceAlreadyExistsException {
         Connection conn = DBConnection.getConnection();
 
-        String query = "INSERT INTO NONCE (publicKey,nonce) " + "VALUES (?,?);";
-
-        try (PreparedStatement ps = conn.prepareStatement(query))
-        {
-            ps.setBytes(1, publicKey);
-            ps.setInt(2, nonce);
-            if(ps.executeUpdate() == 0) {
+        try {
+            PreparedStatements.getCreateNoncePS().setBytes(1, publicKey);
+            PreparedStatements.getCreateNoncePS().setInt(2, nonce);
+            if(PreparedStatements.getCreateNoncePS().executeUpdate() == 0) {
                 throw new NonceExceptions.FailInsertNonceException();
             }
         } catch (SQLException e) {
