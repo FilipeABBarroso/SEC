@@ -1,6 +1,7 @@
 package tecnico.sec.client;
 
 import java.security.PublicKey;
+import java.util.List;
 import java.util.Scanner;
 import com.google.protobuf.ProtocolStringList;
 import org.javatuples.Pair;
@@ -92,7 +93,7 @@ public class Main {
     }
 
     public static void check_account_request() {
-        Pair<Integer,ProtocolStringList> res = Client.check_account();
+        Pair<Integer, List<String>> res = Client.check_account();
         if (res!=null) {
             System.out.println("Balance : " + res.getValue0());
             listTransactions(res.getValue1());
@@ -112,7 +113,7 @@ public class Main {
             System.out.println("Public key not valid!");
             return;
         }
-        ProtocolStringList res = Client.audit(destinationPubKey);
+        List<String> res = Client.audit(destinationPubKey);
         if(res != null){
             listTransactions(res);
         } else {
@@ -120,7 +121,7 @@ public class Main {
         }
     }
 
-    private static void listTransactions(ProtocolStringList transactions) {
+    private static void listTransactions(List<String> transactions) {
         if(transactions.isEmpty()){
             System.out.println("No transactions!");
             return;
