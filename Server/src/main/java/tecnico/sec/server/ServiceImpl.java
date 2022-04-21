@@ -49,7 +49,6 @@ public class ServiceImpl extends ServiceImplBase {
             responseObserver.onNext(OpenAccountResponse.newBuilder().setSignature(ByteString.copyFrom(signedPublicKey)).build());
             responseObserver.onCompleted();
         } catch (BaseException e) {
-            System.out.println(e);
             responseObserver.onError(e.toResponseException());
         }
     }
