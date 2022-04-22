@@ -14,18 +14,31 @@ message Error {
 message NonceRequest {
   bytes publicKey = 1;
 }
+
 message NonceResponse {
   oneof response {
-    int32 nonce = 1;
+    Nonce nonce = 1;
     Error error = 2;
   }
+}
+
+message Nonce{
+  int32 nonce = 1;
 }
 
 message OpenAccountRequest {
   bytes publicKey = 1;
   bytes signature = 2;
 }
+
 message OpenAccountResponse {
+  oneof response{
+    OpenAccount openAccount = 1;
+    Error error = 2;
+  }
+}
+
+message OpenAccount{
   bytes signature = 1;
 }
 
