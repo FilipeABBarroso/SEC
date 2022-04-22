@@ -38,18 +38,16 @@ public class Transactions {
             conn.setAutoCommit(false);
 
             CallableStatement cs = conn.prepareCall("{ ? = call add_transaction(?, ?, ?, ?::statusOptions, ?, ?) }");
-            cs.setBytes(1, publicKeySender);
-            cs.setBytes(2, publicKeyReceiver);
-            cs.setInt(3, amount);
-            cs.setString(4, "Pending");
-            cs.setInt(5, nonce);
-            cs.setBytes(6, signature);
+            cs.registerOutParameter(1, Types.INTEGER);
+            cs.setBytes(2, publicKeySender);
+            cs.setBytes(3, publicKeyReceiver);
+            cs.setInt(4, amount);
+            cs.setString(5, "Pending");
+            cs.setInt(6, nonce);
+            cs.setBytes(7, signature);
             cs.executeUpdate();
 
             int id = cs.getInt(1);
-            /* if(PreparedStatements.getAddTransactionPS().executeUpdate() == 0) {
-                throw new TransactionsExceptions.FailInsertTransactionException();
-            } */
 
             // update sender balance
             int updatedBalance = Balance.getBalance(publicKeySender) - amount;

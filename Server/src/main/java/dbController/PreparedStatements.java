@@ -111,7 +111,7 @@ public class PreparedStatements {
         Connection conn = DBConnection.getConnection();
         if (updateBalance == null){
             try {
-                String query = "UPDATE BALANCE set balance = ?, id = ? where publicKey=?;";
+                String query = "UPDATE BALANCE set balance = ?, counter = ? where publicKey=?;";
                 updateBalance = conn.prepareStatement(query);
             } catch (SQLException e) {
                 System.out.println(e);
