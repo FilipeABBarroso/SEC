@@ -14,7 +14,8 @@ message OpenAccountRequest {
   bytes signature = 2;
 }
 message OpenAccountResponse {
-  bytes signature = 2;
+  repeated string servers = 1;
+  repeated bytes signatures = 2;
 }
 
 message SendAmountRequest {
@@ -25,7 +26,8 @@ message SendAmountRequest {
   bytes signature = 5;
 }
 message SendAmountResponse {
-  bytes signature = 2;
+  repeated string servers = 1;
+  repeated bytes signatures = 2;
 }
 
 message ReceiveAmountRequest {
@@ -34,7 +36,8 @@ message ReceiveAmountRequest {
   bytes signature = 4;
 }
 message ReceiveAmountResponse {
-  bytes signature = 2;
+  repeated string servers = 1;
+  repeated bytes signatures = 2;
 }
 
 message CheckAccountRequest {
@@ -43,7 +46,8 @@ message CheckAccountRequest {
 message CheckAccountResponse {
   int32 balance = 1;
   repeated string transactions = 2;
-  bytes signature = 3;
+  repeated string servers = 3;
+  repeated bytes signatures = 4;
 }
 
 message AuditRequest {
@@ -51,7 +55,8 @@ message AuditRequest {
 }
 message AuditResponse {
   repeated string transactions = 1;
-  bytes signature = 2;
+  repeated string servers = 3;
+  repeated bytes signatures = 4;
 }
 
 service Service {
