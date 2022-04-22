@@ -41,7 +41,7 @@ public class PreparedStatements {
         Connection conn = DBConnection.getConnection();
         if (openAccount == null){
             try {
-                String query = "INSERT INTO BALANCE (publicKey,balance,counter) " + "VALUES (?,?,?);";
+                String query = "INSERT INTO BALANCE (publicKey,balance,lastTransactionId) " + "VALUES (?,?,?);";
                 openAccount = conn.prepareStatement(query);
             } catch (SQLException e) {
                 System.out.println(e);
@@ -79,20 +79,6 @@ public class PreparedStatements {
         return createNonce;
     }
 
-    public static PreparedStatement getAddTransactionPS() throws BalanceExceptions.GeneralMYSQLException {
-        Connection conn = DBConnection.getConnection();
-        if (addTransaction == null){
-            try {
-                String query = "INSERT INTO TRANSACTIONS (publicKeySender,publicKeyReceiver,amount,status,nonce,signature) " + "VALUES (?,?,?,?::statusOptions,?,?);";
-                addTransaction = conn.prepareStatement(query);
-            } catch (SQLException e) {
-                System.out.println(e);
-                throw new BalanceExceptions.GeneralMYSQLException();
-            }
-        }
-        return addTransaction;
-    }
-
     public static PreparedStatement getCheckBalancePS() throws BalanceExceptions.GeneralMYSQLException {
         Connection conn = DBConnection.getConnection();
         if (checkBalance == null){
@@ -111,7 +97,7 @@ public class PreparedStatements {
         Connection conn = DBConnection.getConnection();
         if (updateBalance == null){
             try {
-                String query = "UPDATE BALANCE set balance = ?, counter = ? where publicKey=?;";
+                String query = "UPDATE BALANCE set balance = ?, lastTransactionId = ? where publicKey=?;";
                 updateBalance = conn.prepareStatement(query);
             } catch (SQLException e) {
                 System.out.println(e);
