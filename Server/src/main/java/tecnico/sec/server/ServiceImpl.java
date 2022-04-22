@@ -8,6 +8,7 @@ import org.javatuples.Pair;
 import tecnico.sec.KeyStore.singletons.KeyStore;
 import tecnico.sec.KeyStore.singletons.Sign;
 import tecnico.sec.grpc.*;
+import tecnico.sec.grpc.Error;
 import tecnico.sec.grpc.ServiceGrpc.ServiceImplBase;
 import tecnico.sec.proto.exceptions.BalanceExceptions;
 import tecnico.sec.proto.exceptions.BaseException;
@@ -29,17 +30,27 @@ public class ServiceImpl extends ServiceImplBase {
 
         try {
             int nonce = Nonce.getNonce(publicKey);
-            responseObserver.onNext(NonceResponse.newBuilder().setNonce(nonce).build());
+            tecnico.sec.grpc.Nonce nonceField = tecnico.sec.grpc.Nonce.newBuilder().setNonce(nonce).build();
+            responseObserver.onNext(NonceResponse.newBuilder().setNonce(nonceField).build());
             responseObserver.onCompleted();
         } catch (NonceExceptions.NonceNotFoundException | BalanceExceptions.GeneralMYSQLException e) {
             SecureRandom random = new SecureRandom();
             int nonce = random.nextInt();
-            responseObserver.onNext(NonceResponse.newBuilder().setNonce(nonce).build());
-            responseObserver.onCompleted();
+            tecnico.sec.grpc.Nonce nonceField = tecnico.sec.grpc.Nonce.newBuilder().setNonce(nonce).build();
             try {
                 Nonce.createNonce(publicKey , nonce);
+                responseObserver.onNext(NonceResponse.newBuilder().setNonce(nonceField).build());
+                responseObserver.onCompleted();
             } catch (BaseException ex) {
-                responseObserver.onError(ex);
+                try {
+                    //responseObserver.onError(ex);
+                    String errorMessage = ex.getMessage();
+                    byte[] signedPublicKey = Sign.signMessage(publicKey,errorMessage);
+                    Error error = Error.newBuilder().setMessage(ex.getMessage()).setSignature(ByteString.copyFrom(signedPublicKey)).build();
+                    responseObserver.onNext(NonceResponse.newBuilder().setError(error).build());
+                    responseObserver.onCompleted();
+                } catch (BaseException ignored){
+                }
             }
         }
     }
@@ -53,71 +64,23 @@ public class ServiceImpl extends ServiceImplBase {
             Sign.checkSignature(publicKey, signature, publicKey);
             Balance.openAccount(publicKey);
             byte[] signedPublicKey = Sign.signMessage(publicKey);
-            responseObserver.onNext(OpenAccountResponse.newBuilder().setSignature(ByteString.copyFrom(signedPublicKey)).build());
+            OpenAccount openAccount = OpenAccount.newBuilder().setSignature(ByteString.copyFrom(signedPublicKey)).build();
+            responseObserver.onNext(OpenAccountResponse.newBuilder().setOpenAccount(openAccount).build());
             responseObserver.onCompleted();
         } catch (BaseException e) {
-            responseObserver.onError(e.toResponseException());
-        }
-    }
-
-    @Override
-    public void broadCastOpenAccount(OpenAccountRequest request , StreamObserver<OpenAccountResponse> responseObserver){
-        List<Pair<String,Object>> responses = new ArrayList<>();
-        CountDownLatch latch = new CountDownLatch(ServerInfo.getServerList().size() / 2 + 1);
-        for(Server server : ServerInfo.getServerList()){
-            server.getConnection().openAccount(request, new StreamObserver<>() {
-                @Override
-                public void onNext(OpenAccountResponse response) {
-                    synchronized (latch) {
-                        if (latch.getCount() != 0) {
-                            try {
-                                Sign.checkSignature(server.getPublicKey().getEncoded() , response.getSignature().toByteArray() , request.getPublicKey().toByteArray());
-                                responses.add(Pair.with(KeyStore.publicKeyToString(server.getPublicKey()) ,response));
-                            }catch (Exception e) {
-                                System.out.println(e);
-                            }
-                            latch.countDown();
-                        }
-                    }
-                }
-
-                @Override
-                public void onError(Throwable t) {
-                    synchronized (latch) {
-                        if (latch.getCount() != 0) {
-                            responses.add(Pair.with(KeyStore.publicKeyToString(server.getPublicKey()) ,t));
-                            latch.countDown();
-                        }
-                    }
-                }
-
-                @Override
-                public void onCompleted() {
-                }
-            });
-        }
-        try {
-            latch.await();
-
-            Map<Object, Long> count = responses.stream().collect(groupingBy(p -> p.getValue1().getClass(), counting()));
-            System.out.println(count);
-            Map.Entry<Object , Long> max = Collections.max(count.entrySet(), Comparator.comparing(Map.Entry::getValue));
-            System.out.println(max.getKey());
-            System.out.println(OpenAccountResponse.class);
-            System.out.println(max.getKey() instanceof OpenAccountResponse);
-            if (max.getKey() instanceof OpenAccountResponse) {
-                System.out.println("Entrou");
-                responseObserver.onNext(null);
+            try {
+                //responseObserver.onError(ex);
+                String errorMessage = e.getMessage();
+                byte[] signedPublicKey = Sign.signMessage(publicKey,errorMessage);
+                Error error = Error.newBuilder().setMessage(e.getMessage()).setSignature(ByteString.copyFrom(signedPublicKey)).build();
+                responseObserver.onNext(OpenAccountResponse.newBuilder().setError(error).build());
                 responseObserver.onCompleted();
+            } catch (BaseException ignored){
             }
-            else{
-                responseObserver.onError(null);
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
         }
     }
 
+    /*
     @Override
     public void updateTransactions(UpdateTransactionsRequest request, StreamObserver<Ack> responseObserver) {
         //todo update -- transactions mal assinadas(done) -- check signatures(done)
@@ -135,7 +98,7 @@ public class ServiceImpl extends ServiceImplBase {
         } catch(BaseException e){
             System.out.println("Problems Updating");
         }
-    }
+    }*/
 
     @Override
     public void sendAmount(SendAmountRequest request, StreamObserver<SendAmountResponse> responseObserver) {
@@ -149,10 +112,19 @@ public class ServiceImpl extends ServiceImplBase {
             Sign.checkSignature(publicKeySource, signature, publicKeySource , publicKeyDestination , amount , nonce);
             Transactions.addTransaction(publicKeySource , publicKeyDestination , amount , nonce , signature);
             byte[] signedIncrementedNonce = Sign.signMessage(publicKeySource , publicKeyDestination , amount , nonce + 1);
-            responseObserver.onNext(SendAmountResponse.newBuilder().setSignature(ByteString.copyFrom(signedIncrementedNonce)).build());
+            SendAmount sendAmount = SendAmount.newBuilder().setSignature(ByteString.copyFrom(signedIncrementedNonce)).build();
+            responseObserver.onNext(SendAmountResponse.newBuilder().setSendAmount(sendAmount).build());
             responseObserver.onCompleted();
         } catch (BaseException e) {
-            responseObserver.onError(e.toResponseException());
+            try {
+                //responseObserver.onError(ex);
+                String errorMessage = e.getMessage();
+                byte[] signedPublicKey = Sign.signMessage(publicKeySource , publicKeyDestination , amount , nonce + 1,errorMessage);
+                Error error = Error.newBuilder().setMessage(e.getMessage()).setSignature(ByteString.copyFrom(signedPublicKey)).build();
+                responseObserver.onNext(SendAmountResponse.newBuilder().setError(error).build());
+                responseObserver.onCompleted();
+            } catch (BaseException ignored){
+            }
         }
     }
 
@@ -166,10 +138,19 @@ public class ServiceImpl extends ServiceImplBase {
             Sign.checkSignature(publicKey, signature, publicKey , transactionID);
             Transactions.changeStatus(transactionID , publicKey);
             byte[] signedFields = Sign.signMessage(publicKey , transactionID);
-            responseObserver.onNext(ReceiveAmountResponse.newBuilder().setSignature(ByteString.copyFrom(signedFields)).build());
+            ReceiveAmount receiveAmount = ReceiveAmount.newBuilder().setSignature(ByteString.copyFrom(signedFields)).build();
+            responseObserver.onNext(ReceiveAmountResponse.newBuilder().setReceiveAmount(receiveAmount).build());
             responseObserver.onCompleted();
         } catch (BaseException e) {
-            responseObserver.onError(e.toResponseException());
+            try {
+                //responseObserver.onError(ex);
+                String errorMessage = e.getMessage();
+                byte[] signedPublicKey = Sign.signMessage(publicKey , transactionID, errorMessage);
+                Error error = Error.newBuilder().setMessage(e.getMessage()).setSignature(ByteString.copyFrom(signedPublicKey)).build();
+                responseObserver.onNext(ReceiveAmountResponse.newBuilder().setError(error).build());
+                responseObserver.onCompleted();
+            } catch (BaseException ignored){
+            }
         }
     }
 
@@ -180,69 +161,15 @@ public class ServiceImpl extends ServiceImplBase {
         try {
             int balance = Balance.getBalance(publicKey);
             List<Transaction> transactions = Transactions.getPendingTransactions(publicKey);
-            CheckAccountResponse.Builder builder = CheckAccountResponse.newBuilder();
+            CheckAccount.Builder builder = CheckAccount.newBuilder();
             builder.addAllTransactions(transactions);
             builder.setBalance(balance);
-            byte[] selfSignedFields = Sign.signMessage(balance , builder.getTransactionsList().toArray());
-            //builder.setSignatures(ByteString.copyFrom(signedFields));
-            responseObserver.onNext(builder.build());
+            byte[] signedFields = Sign.signMessage(balance , builder.getTransactionsList().toArray());
+            builder.setSignature(ByteString.copyFrom(signedFields));
+            responseObserver.onNext(CheckAccountResponse.newBuilder().setCheckAccount(builder.build()).build());
             responseObserver.onCompleted();
         } catch (BaseException e) {
             responseObserver.onError(e.toResponseException());
-        }
-    }
-
-    @Override
-    public void broadCastCheckAccount(CheckAccountRequest request, StreamObserver<CheckAccountResponse> responseObserver) {
-        List<CheckAccountResponse> responses = new ArrayList<>();
-        CountDownLatch latch = new CountDownLatch(ServerInfo.getServerList().size() / 2 + 1);
-        for(Server server : ServerInfo.getServerList()){
-            server.getConnection().checkAccount(request, new StreamObserver<>() {
-                @Override
-                public void onNext(CheckAccountResponse response) {
-                    synchronized (latch) {
-                        if (latch.getCount() != 0) {
-                            try {
-                                Sign.checkSignature(server.getPublicKey().getEncoded() , response.getSignature().toByteArray() , request.getPublicKey().toByteArray());
-                                responses.add(response);
-                            }catch (Exception e) {
-                                System.out.println(e);
-                            }
-                            latch.countDown();
-                        }
-                    }
-                }
-
-                @Override
-                public void onError(Throwable t) {
-                    synchronized (latch) {
-                        if (latch.getCount() != 0) {
-                            System.out.println(t.getMessage());
-                            responses.add(null);
-                            latch.countDown();
-                        }
-                    }
-                }
-
-                @Override
-                public void onCompleted() {
-                }
-            });
-        }
-        try {
-            latch.await();
-            int good = 0;
-            int bad = 0;
-            for(CheckAccountResponse response:responses){
-                if(response == null) bad++;
-                else good++;
-            }
-            System.out.println(good);
-            System.out.println(bad);
-            responseObserver.onNext(responses.get(0));
-            responseObserver.onCompleted();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
         }
     }
 
@@ -252,11 +179,11 @@ public class ServiceImpl extends ServiceImplBase {
 
         try {
             List<Transaction> transactions = Transactions.getTransactions(publicKey);
-            AuditResponse.Builder builder = AuditResponse.newBuilder();
+            Audit.Builder builder = Audit.newBuilder();
             builder.addAllTransactions(transactions);
             byte[] signedFields = Sign.signMessage(builder.getTransactionsList().toArray());
             builder.setSignature(ByteString.copyFrom(signedFields));
-            responseObserver.onNext(builder.build());
+            responseObserver.onNext(AuditResponse.newBuilder().setAudit(builder.build()).build());
             responseObserver.onCompleted();
         } catch (BaseException e) {
             responseObserver.onError(e.toResponseException());
