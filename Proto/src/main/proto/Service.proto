@@ -3,10 +3,6 @@ option java_multiple_files = true;
 package tecnico.sec.grpc;
 
 message Error {
-  oneof request {
-    NonceResponse nonceResponse = 1;
-    OpenAccountResponse openAccountResponse = 2;
-  }
   string message = 3;
   bytes signature = 4;
 }
@@ -14,14 +10,12 @@ message Error {
 message NonceRequest {
   bytes publicKey = 1;
 }
-
 message NonceResponse {
   oneof response {
     Nonce nonce = 1;
     Error error = 2;
   }
 }
-
 message Nonce{
   int32 nonce = 1;
 }
@@ -30,14 +24,12 @@ message OpenAccountRequest {
   bytes publicKey = 1;
   bytes signature = 2;
 }
-
 message OpenAccountResponse {
   oneof response{
     OpenAccount openAccount = 1;
     Error error = 2;
   }
 }
-
 message OpenAccount{
   bytes signature = 1;
 }
@@ -50,6 +42,12 @@ message SendAmountRequest {
   bytes signature = 5;
 }
 message SendAmountResponse {
+  oneof response{
+    SendAmount sendAmount = 1;
+    Error error = 2;
+  }
+}
+message SendAmount{
   bytes signature = 1;
 }
 
@@ -59,13 +57,25 @@ message ReceiveAmountRequest {
   bytes signature = 3;
 }
 message ReceiveAmountResponse {
-  bytes signatures = 1;
+  oneof response{
+    ReceiveAmount receiveAmount = 1;
+    Error error = 2;
+  }
+}
+message ReceiveAmount {
+  bytes signature = 1;
 }
 
 message CheckAccountRequest {
   bytes publicKey = 1;
 }
 message CheckAccountResponse {
+  oneof response{
+    CheckAccount checkAccount = 1;
+    Error error = 2;
+  }
+}
+message CheckAccount {
   int32 balance = 1;
   repeated Transaction transactions = 2;
   bytes signature = 3;
@@ -75,6 +85,12 @@ message AuditRequest {
   bytes publicKey = 1;
 }
 message AuditResponse {
+  oneof response{
+    Audit audit = 1;
+    Error error = 2;
+  }
+}
+message Audit {
   repeated Transaction transactions = 1;
   bytes signature = 2;
 }

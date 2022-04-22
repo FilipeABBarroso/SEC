@@ -3,6 +3,7 @@ package tecnico.sec.client;
 import com.google.protobuf.ByteString;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import io.grpc.stub.StreamObserver;
 import org.javatuples.Pair;
 
 import tecnico.sec.KeyStore.singletons.KeyStore;
@@ -12,16 +13,18 @@ import tecnico.sec.proto.exceptions.IOExceptions;
 import tecnico.sec.proto.exceptions.KeyExceptions;
 import tecnico.sec.proto.exceptions.SignatureExceptions;
 
+import static java.util.stream.Collectors.groupingBy;
 import static tecnico.sec.KeyStore.singletons.Sign.checkSignature;
 import static tecnico.sec.KeyStore.singletons.Sign.signMessage;
 
 import java.security.*;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.CountDownLatch;
 
 
 public class Client {
 
-    //todo anti spam mechanism
+    //todo anti spam mechanism - error signature
 
     public static boolean open_account() {
         try {
@@ -34,38 +37,61 @@ public class Client {
                     .setSignature(ByteString.copyFrom(signature))
                     .build();
 
+            List<WriteResponse> replies = new ArrayList<>();
+            CountDownLatch latch = new CountDownLatch(ServerConnection.getServerCount() / 2 + 1);
+
             for (ServerInfo server : ServerConnection.getConnection()) {
-                OpenAccountResponse openAccountResponse = server.getStub().openAccount(request);
-                try {
-                    openAccountCheckResponseSignatures(openAccountResponse, pubKeyField);
-                } catch (BaseException ignored) {
-                    continue;
-                }
-                return true;
+                server.getStub().openAccount(request, new StreamObserver<OpenAccountResponse>() {
+                    @Override
+                    public void onNext(OpenAccountResponse response) {
+                        try {
+                            switch (response.getResponseCase()) {
+                                case OPENACCOUNT -> {
+                                    openAccountCheckResponse(server.getPublicKey().getEncoded(), response.getOpenAccount().getSignature().toByteArray(), pubKeyField);
+                                    replies.add(new WriteResponse(response, false, ""));
+                                    latch.countDown();
+                                }
+                                case ERROR -> {
+                                    errorCheckSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),pubKeyField,response.getError().getMessage());
+                                    replies.add(new WriteResponse(response, true, response.getError().getMessage()));
+                                    latch.countDown();
+                                }
+                                case RESPONSE_NOT_SET -> {
+                                }
+                            }
+                        } catch(BaseException ignored){}
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        System.out.println("Error occurred " + t.getMessage());
+                    }
+
+                    @Override
+                    public void onCompleted() {
+                    }
+                });
             }
-        } catch (BaseException e) {
+            latch.await();
+            WriteResponse response = WriteResponse.getResult(replies);
+            System.out.println(response.getMessage());
+            return response.isError();
+        } catch (InterruptedException | BaseException e) {
             Status status = Status.fromThrowable(e);
             System.out.println("ERROR : " + status.getCode() + " : " + status.getDescription());
         }
         return false;
     }
 
-    public static void openAccountCheckResponseSignatures(OpenAccountResponse openAccountResponse, byte[] pubKeyField) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, SignatureExceptions.SignatureDoNotMatchException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException, KeyExceptions.GeneralKeyStoreErrorException {
-        for (int i = 0; i < openAccountResponse.getServersList().size(); i++) {
-            PublicKey serverPublicKey = KeyStore.stringToPublicKey(openAccountResponse.getServersList().get(i));
-            if (ServerConnection.existsPublicKey(serverPublicKey)) {
-                openAccountCheckResponse(serverPublicKey.getEncoded(), openAccountResponse.getSignaturesList().get(i).toByteArray(), pubKeyField);
-            } else {
-                throw new IOExceptions.IOException();
-            }
-        }
+    public static void errorCheckSignature(byte[] serverPublicKey, byte[] signature, byte[] accountPublicKey, String errorMessage) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, SignatureExceptions.SignatureDoNotMatchException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException {
+        checkSignature(serverPublicKey,signature,accountPublicKey,errorMessage);
     }
 
     public static void openAccountCheckResponse(byte[] serverPublicKey, byte[] signature, byte[] accountPublicKey) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, SignatureExceptions.SignatureDoNotMatchException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException {
         checkSignature(serverPublicKey, signature, accountPublicKey);
     }
 
-    public static boolean send_amount(PublicKey destination, int amount) { //todo write
+    public static boolean send_amount(PublicKey destination, int amount) {
         try {
             PublicKey source = KeyStore.getPublicKey();
             byte[] sourceField = source.getEncoded();
@@ -73,52 +99,92 @@ public class Client {
 
             NonceRequest nonceRequest = NonceRequest.newBuilder().setPublicKey(ByteString.copyFrom(sourceField)).build();
 
+            List<WriteResponse> replies = new ArrayList<>();
+            CountDownLatch latch = new CountDownLatch(ServerConnection.getServerCount() / 2 + 1);
+
             for (ServerInfo server : ServerConnection.getConnection()) {
-                NonceResponse nonceResponse = server.getStub().getNonce(nonceRequest);
-                int nonce = nonceResponse.getNonce();
+                server.getStub().getNonce(nonceRequest,  new StreamObserver<NonceResponse>() {
+                    @Override
+                    public void onNext(NonceResponse response) {
+                        try {
+                            switch (response.getResponseCase()) {
+                                case NONCE -> {
+                                    int nonce = response.getNonce().getNonce();
 
-                byte[] signature = signMessage(sourceField, destinationField, amount, nonce);
+                                    byte[] signature = signMessage(sourceField, destinationField, amount, nonce);
 
-                SendAmountRequest sendAmountRequest = SendAmountRequest.newBuilder()
-                        .setPublicKeySource(ByteString.copyFrom(sourceField))
-                        .setPublicKeyDestination(ByteString.copyFrom(destinationField))
-                        .setAmount(amount)
-                        .setNonce(nonce)
-                        .setSignature(ByteString.copyFrom(signature))
-                        .build();
+                                    SendAmountRequest sendAmountRequest = SendAmountRequest.newBuilder()
+                                            .setPublicKeySource(ByteString.copyFrom(sourceField))
+                                            .setPublicKeyDestination(ByteString.copyFrom(destinationField))
+                                            .setAmount(amount)
+                                            .setNonce(nonce)
+                                            .setSignature(ByteString.copyFrom(signature))
+                                            .build();
 
-                SendAmountResponse sendAmountResponse = server.getStub().sendAmount(sendAmountRequest);
+                                    server.getStub().sendAmount(sendAmountRequest, new StreamObserver<SendAmountResponse>() {
+                                        @Override
+                                        public void onNext(SendAmountResponse response) {
+                                            try {
+                                                switch (response.getResponseCase()) {
+                                                    case SENDAMOUNT -> {
+                                                        sendAmountCheckResponse(server.getPublicKey().getEncoded(), response.getSendAmount().getSignature().toByteArray(), sourceField, destinationField, amount, nonce + 1);
+                                                        replies.add(new WriteResponse(response, false, ""));
+                                                        latch.countDown();
+                                                    }
+                                                    case ERROR -> {
+                                                        checkSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),sourceField,destinationField,amount,nonce + 1,response.getError().getMessage());
+                                                        replies.add(new WriteResponse(response, true, response.getError().getMessage()));
+                                                        latch.countDown();
+                                                    }
+                                                    case RESPONSE_NOT_SET -> {
+                                                    }
+                                                }
+                                            } catch(BaseException ignored){}
+                                        }
 
-                try {
-                    sendAmountCheckResponseSignatures(sendAmountResponse, sourceField, destinationField, amount, nonce + 1);
-                } catch (BaseException ignored) {
-                    continue;
-                }
-                return true;
+                                        @Override
+                                        public void onError(Throwable t) {
+                                            System.out.println("Error occurred " + t.getMessage());
+                                        }
+
+                                        @Override
+                                        public void onCompleted() {
+                                        }
+                                    });
+                                }
+                                case ERROR, RESPONSE_NOT_SET -> {
+                                }
+                            }
+                        } catch(BaseException ignored){}
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        System.out.println("Error occurred " + t.getMessage());
+                    }
+
+                    @Override
+                    public void onCompleted() {
+                    }
+                });
+
             }
-        } catch (BaseException e) {
+            latch.await();
+            WriteResponse response = WriteResponse.getResult(replies);
+            System.out.println(response.getMessage());
+            return response.isError();
+        } catch (BaseException | InterruptedException e) {
             Status status = Status.fromThrowable(e);
             System.out.println("ERROR : " + status.getCode() + " : " + status.getDescription());
         }
         return false;
     }
 
-    public static void sendAmountCheckResponseSignatures(SendAmountResponse sendAmountResponse, byte[] sourceField, byte[] destinationField, int amount, int nonce) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, SignatureExceptions.SignatureDoNotMatchException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException, KeyExceptions.GeneralKeyStoreErrorException {
-        for (int i = 0; i < sendAmountResponse.getServersList().size(); i++) {
-            PublicKey serverPublicKey = KeyStore.stringToPublicKey(sendAmountResponse.getServersList().get(i));
-            if (ServerConnection.existsPublicKey(serverPublicKey)) {
-                sendAmountCheckResponse(serverPublicKey.getEncoded(), sendAmountResponse.getSignaturesList().get(i).toByteArray(), sourceField, destinationField, amount, nonce);
-            } else {
-                throw new IOExceptions.IOException();
-            }
-        }
-    }
-
     public static void sendAmountCheckResponse(byte[] serverPublicKey, byte[] signature, byte[] source, byte[] destination, int amount, int nonce) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, SignatureExceptions.SignatureDoNotMatchException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException {
         checkSignature(serverPublicKey, signature, source, destination, amount, nonce);
     }
 
-    public static boolean receive_amount(int transactionID) { //todo write
+    public static boolean receive_amount(int transactionID) {
         try {
             PublicKey pubKey = KeyStore.getPublicKey();
             byte[] pubKeyField = pubKey.getEncoded();
@@ -130,32 +196,50 @@ public class Client {
                     .setSignature(ByteString.copyFrom(signature))
                     .build();
 
-            for (ServerInfo server : ServerConnection.getConnection()) {
-                ReceiveAmountResponse receiveAmountResponse = server.getStub().receiveAmount(request);
+            List<WriteResponse> replies = new ArrayList<>();
+            CountDownLatch latch = new CountDownLatch(ServerConnection.getServerCount() / 2 + 1);
 
-                try {
-                    receiveAmountCheckResponseSignatures(receiveAmountResponse, pubKeyField, transactionID);
-                } catch (BaseException ignored) {
-                    continue;
-                }
-                return true;
+            for (ServerInfo server : ServerConnection.getConnection()) {
+                server.getStub().receiveAmount(request, new StreamObserver<ReceiveAmountResponse>() {
+                    @Override
+                    public void onNext(ReceiveAmountResponse response) {
+                        try {
+                            switch (response.getResponseCase()) {
+                                case RECEIVEAMOUNT -> {
+                                    receiveAmountCheckResponse(server.getPublicKey().getEncoded(), response.getReceiveAmount().getSignature().toByteArray(), pubKeyField, transactionID);
+                                    replies.add(new WriteResponse(response, false, ""));
+                                    latch.countDown();
+                                }
+                                case ERROR -> {
+                                    checkSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),pubKeyField,transactionID,response.getError().getMessage());
+                                    replies.add(new WriteResponse(response, true, response.getError().getMessage()));
+                                    latch.countDown();
+                                }
+                                case RESPONSE_NOT_SET -> {
+                                }
+                            }
+                        } catch(BaseException ignored){}
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        System.out.println("Error occurred " + t.getMessage());
+                    }
+
+                    @Override
+                    public void onCompleted() {
+                    }
+                });
             }
-        } catch (BaseException e) {
+            latch.await();
+            WriteResponse response = WriteResponse.getResult(replies);
+            System.out.println(response.getMessage());
+            return response.isError();
+        } catch (BaseException | InterruptedException e) {
             Status status = Status.fromThrowable(e);
             System.out.println("ERROR : " + status.getCode() + " : " + status.getDescription());
         }
         return false;
-    }
-
-    public static void receiveAmountCheckResponseSignatures(ReceiveAmountResponse receiveAmountResponse, byte[] accountPublicKey, int transactionID) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, SignatureExceptions.SignatureDoNotMatchException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException, KeyExceptions.GeneralKeyStoreErrorException {
-        for (int i = 0; i < receiveAmountResponse.getServersList().size(); i++) {
-            PublicKey serverPublicKey = KeyStore.stringToPublicKey(receiveAmountResponse.getServersList().get(i));
-            if (ServerConnection.existsPublicKey(serverPublicKey)) {
-                receiveAmountCheckResponse(serverPublicKey.getEncoded(), receiveAmountResponse.getSignaturesList().get(i).toByteArray(), accountPublicKey, transactionID);
-            } else {
-                throw new IOExceptions.IOException();
-            }
-        }
     }
 
     public static void receiveAmountCheckResponse(byte[] serverPublicKey, byte[] signature, byte[] accountPublicKey, int transactionID) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, SignatureExceptions.SignatureDoNotMatchException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException {
@@ -171,32 +255,53 @@ public class Client {
                     .setPublicKey(ByteString.copyFrom(pubKeyField))
                     .build();
 
+            List<ReadResponse> replies = new ArrayList<>();
+            CountDownLatch latch = new CountDownLatch(ServerConnection.getServerCount() / 2 + 1);
+
             for (ServerInfo server : ServerConnection.getConnection()) {
-                CheckAccountResponse checkAccountResponse = server.getStub().checkAccount(request);
-                Pair<Integer, List<Transaction>> result = Pair.with(checkAccountResponse.getBalance(), checkAccountResponse.getTransactionsList());
-                try {
-                    checkAccountCheckResponseSignatures(checkAccountResponse);
-                } catch (BaseException ignored) {
-                    continue;
-                }
-                return result;
+                server.getStub().checkAccount(request,  new StreamObserver<CheckAccountResponse>() {
+                    @Override
+                    public void onNext(CheckAccountResponse response) {
+                        try {
+                            switch (response.getResponseCase()) {
+                                case CHECKACCOUNT -> {
+                                    checkAccountCheckResponse(server.getPublicKey().getEncoded(), response.getCheckAccount().getSignature().toByteArray(), response.getCheckAccount().getBalance(), response.getCheckAccount().getTransactionsList().toArray());
+                                    replies.add(new ReadResponse(response, false, "", response.getCheckAccount().getTransactionsList()));
+                                    latch.countDown();
+                                }
+                                case ERROR -> {
+                                    errorCheckSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),pubKeyField,response.getError().getMessage());
+                                    replies.add(new ReadResponse(response, true, response.getError().getMessage(),new ArrayList<>()));
+                                    latch.countDown();
+                                }
+                                case RESPONSE_NOT_SET -> {
+                                }
+                            }
+                        } catch(BaseException ignored){}
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        System.out.println("Error occurred " + t.getMessage());
+                    }
+
+                    @Override
+                    public void onCompleted() {
+                    }
+                });
             }
-        } catch (BaseException e) {
+            latch.await();
+            ReadResponse response = ReadResponse.getResult(replies);
+            System.out.println(response.getMessage());
+            if(!response.isError()){
+                //todo return to user and update servers?
+                //return response.getTransactions();
+            }
+        } catch (BaseException | InterruptedException e) {
             Status status = Status.fromThrowable(e);
             System.out.println("ERROR : " + status.getCode() + " : " + status.getDescription());
         }
         return null;
-    }
-
-    public static void checkAccountCheckResponseSignatures(CheckAccountResponse checkAccountResponse) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, SignatureExceptions.SignatureDoNotMatchException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException, KeyExceptions.GeneralKeyStoreErrorException {
-        for (int i = 0; i < checkAccountResponse.getServersList().size(); i++) {
-            PublicKey serverPublicKey = KeyStore.stringToPublicKey(checkAccountResponse.getServersList().get(i));
-            if (ServerConnection.existsPublicKey(serverPublicKey)) {
-                checkAccountCheckResponse(serverPublicKey.getEncoded(), checkAccountResponse.getSignaturesList().get(i).toByteArray(), checkAccountResponse.getBalance(), checkAccountResponse.getTransactionsList().toArray());
-            } else {
-                throw new IOExceptions.IOException();
-            }
-        }
     }
 
     public static void checkAccountCheckResponse(byte[] serverPublicKey, byte[] signature, int balance, Object[] transactionList) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, SignatureExceptions.SignatureDoNotMatchException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException {
@@ -205,41 +310,64 @@ public class Client {
 
     public static List<Transaction> audit(PublicKey key) {
         try {
+            byte[] pubKeyField = key.getEncoded();
             AuditRequest request = AuditRequest.newBuilder()
-                    .setPublicKey(ByteString.copyFrom(key.getEncoded()))
+                    .setPublicKey(ByteString.copyFrom(pubKeyField))
                     .build();
 
+            List<ReadResponse> replies = new ArrayList<>();
+            CountDownLatch latch = new CountDownLatch(ServerConnection.getServerCount() / 2 + 1);
+
             for (ServerInfo server : ServerConnection.getConnection()) {
-                AuditResponse auditResponse = server.getStub().audit(request);
-                List<Transaction> result = auditResponse.getTransactionsList();
-                try {
-                    auditCheckResponseSignatures(auditResponse);
-                } catch (BaseException ignored) {
-                    continue;
-                }
-                return result;
+                server.getStub().audit(request, new StreamObserver<AuditResponse>() {
+                    @Override
+                    public void onNext(AuditResponse response) {
+                        try {
+                            switch (response.getResponseCase()) {
+                                case AUDIT -> {
+                                    auditCheckResponse(server.getPublicKey().getEncoded(), response.getAudit().getSignature().toByteArray(), response.getAudit().getTransactionsList().toArray());
+                                    replies.add(new ReadResponse(response, false, "", response.getAudit().getTransactionsList()));
+                                    latch.countDown();
+                                }
+                                case ERROR -> {
+                                    errorCheckSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),pubKeyField,response.getError().getMessage());
+                                    replies.add(new ReadResponse(response, true, response.getError().getMessage(),new ArrayList<>()));
+                                    latch.countDown();
+                                }
+                                case RESPONSE_NOT_SET -> {
+                                }
+                            }
+                        } catch(BaseException ignored){}
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        System.out.println("Error occurred " + t.getMessage());
+                    }
+
+                    @Override
+                    public void onCompleted() {
+                    }
+                });
             }
-        } catch (StatusRuntimeException e) {
+            latch.await();
+            ReadResponse response = ReadResponse.getResult(replies);
+            System.out.println(response.getMessage());
+            if(!response.isError()){
+                //todo update servers?
+                return response.getTransactions();
+            }
+        } catch (StatusRuntimeException | InterruptedException e) {
             Status status = Status.fromThrowable(e);
             System.out.println("ERROR : " + status.getCode() + " : " + status.getDescription());
         }
         return null;
     }
 
-    public static void auditCheckResponseSignatures(AuditResponse auditResponse) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, SignatureExceptions.SignatureDoNotMatchException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException, KeyExceptions.GeneralKeyStoreErrorException {
-        for (int i = 0; i < auditResponse.getServersList().size(); i++) {
-            PublicKey serverPublicKey = KeyStore.stringToPublicKey(auditResponse.getServersList().get(i));
-            if (ServerConnection.existsPublicKey(serverPublicKey)) {
-                auditCheckResponse(serverPublicKey.getEncoded(), auditResponse.getSignaturesList().get(i).toByteArray(), auditResponse.getTransactionsList().toArray());
-            } else {
-                throw new IOExceptions.IOException();
-            }
-        }
-    }
-
     public static void auditCheckResponse(byte[] serverPublicKey, byte[] signature, Object[] transactionList) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, SignatureExceptions.SignatureDoNotMatchException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException {
         checkSignature(serverPublicKey, signature, transactionList);
     }
+
 
 }
 

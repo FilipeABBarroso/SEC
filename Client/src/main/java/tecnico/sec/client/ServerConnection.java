@@ -17,7 +17,7 @@ import java.util.Scanner;
 
 class ServerInfo{
 
-    private final ServiceGrpc.ServiceBlockingStub stub;
+    private final ServiceGrpc.ServiceStub stub;
     private final String host;
     private final int port;
     private final PublicKey publicKey;
@@ -30,11 +30,11 @@ class ServerInfo{
                 .forAddress(host, port)
                 .usePlaintext()
                 .build();
-        this.stub = ServiceGrpc.newBlockingStub(channel);
+        this.stub = ServiceGrpc.newStub(channel);
     }
 
 
-    public ServiceGrpc.ServiceBlockingStub getStub() {
+    public ServiceGrpc.ServiceStub getStub() {
         return stub;
     }
 
