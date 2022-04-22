@@ -24,50 +24,39 @@ public class Balance {
         }
     }
 
-    synchronized public static void openAccount(byte[] publicKey) throws BalanceExceptions.PublicKeyAlreadyExistException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.FailInsertTransactionException {
+    synchronized public static int openAccount(byte[] publicKey) throws BalanceExceptions.PublicKeyAlreadyExistException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.FailInsertTransactionException {
         Connection conn = DBConnection.getConnection();
 
         try {
             int initialBalance = 1000;
 
-            CallableStatement cs = conn.prepareCall("{call addTransaction(?, ?, ?, ?, ?, ?)}");
-            cs.setBytes(1, null);
-            cs.setBytes(2, publicKey);
-            cs.setInt(3, initialBalance);
-            cs.setString(4, "Completed");
-            cs.setBytes(5, null);
-            cs.setBytes(6, null);
-            cs.executeQuery();
-
-            int id = cs.getInt(1);
-
-            // conn.setAutoCommit(false);
-
-            /* PreparedStatements.getAddTransactionPS().setBytes(1, null);
-            PreparedStatements.getAddTransactionPS().setBytes(2, publicKey);
-            PreparedStatements.getAddTransactionPS().setInt(3, initialBalance);
-            PreparedStatements.getAddTransactionPS().setString(4, "Completed");
-            PreparedStatements.getAddTransactionPS().setBytes(5, null);
-            PreparedStatements.getAddTransactionPS().setBytes(6, null);
-            if(PreparedStatements.getAddTransactionPS().executeUpdate() == 0) {
-                throw new TransactionsExceptions.FailInsertTransactionException();
-            }
-
-            PreparedStatements.getSpecificTransactionIdPS().setBytes(1, publicKey);
-            PreparedStatements.getSpecificTransactionIdPS().setBytes(2, null);
-            PreparedStatements.getSpecificTransactionIdPS().setBytes(3, null);
-            ResultSet rs = PreparedStatements.getSpecificTransactionIdPS().executeQuery();
-            rs.next();*/
+            conn.setAutoCommit(false);
 
             PreparedStatements.getOpenAccountPS().setBytes(1, publicKey);
             PreparedStatements.getOpenAccountPS().setInt(2, initialBalance);
-            PreparedStatements.getOpenAccountPS().setInt(3, id);
+            PreparedStatements.getOpenAccountPS().setInt(3, 0);
             if (PreparedStatements.getOpenAccountPS().executeUpdate() == 0) {
                 throw new BalanceExceptions.GeneralMYSQLException();
             }
 
-            // conn.commit();
+            CallableStatement cs = conn.prepareCall("{ ? = call add_transaction(?, ?, ?, ?::statusOptions, ?, ?) }");
+            cs.registerOutParameter(1, Types.INTEGER);
+            cs.setBytes(2, null);
+            cs.setBytes(3, publicKey);
+            cs.setInt(4, initialBalance);
+            cs.setString(5, "Completed");
+            cs.setInt(6, 0);
+            cs.setBytes(7, null);
+
+            cs.executeUpdate();
+
+            int id = cs.getInt(1);
+
+            conn.commit();
+
+            return id;
         } catch (SQLException e) {
+            System.out.println(e);
             if (e.getSQLState().equals(Constants.DUPLICATED_KEY)) {
                 throw new BalanceExceptions.PublicKeyAlreadyExistException();
             } else {

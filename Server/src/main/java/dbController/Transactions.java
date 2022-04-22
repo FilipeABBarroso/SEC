@@ -36,22 +36,15 @@ public class Transactions {
             }
 
             conn.setAutoCommit(false);
-            // Add transaction
-            /*PreparedStatements.getAddTransactionPS().setBytes(1, publicKeySender);
-            PreparedStatements.getAddTransactionPS().setBytes(2, publicKeyReceiver);
-            PreparedStatements.getAddTransactionPS().setInt(3, amount);
-            PreparedStatements.getAddTransactionPS().setString(4, "Pending");
-            PreparedStatements.getAddTransactionPS().setInt(5, nonce);
-            PreparedStatements.getAddTransactionPS().setBytes(6, signature);*/
 
-            CallableStatement cs = conn.prepareCall("{call addTransaction(?, ?, ?, ?, ?, ?)}");
+            CallableStatement cs = conn.prepareCall("{ ? = call add_transaction(?, ?, ?, ?::statusOptions, ?, ?) }");
             cs.setBytes(1, publicKeySender);
             cs.setBytes(2, publicKeyReceiver);
             cs.setInt(3, amount);
             cs.setString(4, "Pending");
             cs.setInt(5, nonce);
             cs.setBytes(6, signature);
-            cs.executeQuery();
+            cs.executeUpdate();
 
             int id = cs.getInt(1);
             /* if(PreparedStatements.getAddTransactionPS().executeUpdate() == 0) {

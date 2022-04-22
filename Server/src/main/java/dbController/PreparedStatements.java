@@ -41,7 +41,7 @@ public class PreparedStatements {
         Connection conn = DBConnection.getConnection();
         if (openAccount == null){
             try {
-                String query = "INSERT INTO BALANCE (publicKey,balance) " + "VALUES (?,?);";
+                String query = "INSERT INTO BALANCE (publicKey,balance,counter) " + "VALUES (?,?,?);";
                 openAccount = conn.prepareStatement(query);
             } catch (SQLException e) {
                 System.out.println(e);

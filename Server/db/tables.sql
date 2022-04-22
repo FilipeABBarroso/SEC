@@ -6,9 +6,7 @@ CREATE TYPE statusOptions AS ENUM(
 CREATE TABLE IF NOT EXISTS Balance(
     publicKey bytea PRIMARY KEY,
     balance integer,
-    counter integer,
-    FOREIGN KEY (counter)
-        REFERENCES Transactions (id)
+    counter integer
 );
 
 CREATE TABLE IF NOT EXISTS Nonce(
@@ -32,21 +30,15 @@ CREATE TABLE IF NOT EXISTS Transactions(
         REFERENCES Balance (publicKey)
 );
 
-CREATE FUNCTION addTransaction(bytea, bytea, int, statusOptions, int, bytea)
+CREATE FUNCTION add_transaction(bytea, bytea, int, statusOptions, int, bytea)
     RETURNS INTEGER
-AS '
-    DECLARE
-      publicKeySender ALIAS FOR $1;
-      publicKeyReceiver ALIAS FOR $2;
-      amount ALIAS FOR $2;
-      status ALIAS FOR $2;
-      nonce ALIAS FOR $2;
-      signature ALIAS FOR $2;
-      id INTEGER;
-    BEGIN
-       select nextval(''id_seq'') into id;
-      INSERT INTO Transactions (id, publicKeySender, publicKeyReceiver, amount, status, nonce, signature) VALUES (id, publicKeySender, publicKeyReceiver, amount, status, nonce, signature);
-    RETURN id;
-    END;
- '
-> LANGUAGE 'plpgsql';
+    AS'
+        DECLARE
+            id_val integer;
+        BEGIN
+            SELECT nextval(''transactions_id_seq'') INTO id_val;
+            INSERT INTO Transactions (id, publicKeySender, publicKeyReceiver, amount, status, nonce, signature) VALUES (id_val, $1, $2, $3, $4, $5, $6);
+            UPDATE Balance set counter = id_val where publicKey=$2;
+        RETURN id_val;
+        END;'
+    LANGUAGE plpgsql;
