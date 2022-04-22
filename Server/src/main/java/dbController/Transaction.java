@@ -1,5 +1,6 @@
 package dbController;
 
+import com.google.protobuf.ByteString;
 import tecnico.sec.KeyStore.singletons.KeyStore;
 
 import java.util.Arrays;
@@ -15,6 +16,14 @@ public class Transaction {
         this.getPublicKeyReceiver = getPublicKeyReceiver;
         this.amount = amount;
         this.id = id;
+    }
+
+    public tecnico.sec.grpc.Transaction toTransactionGrpc() {
+        return tecnico.sec.grpc.Transaction.newBuilder()
+                .setId(id)
+                .setAmount(amount)
+                .setSender(ByteString.copyFrom(publicKeySender))
+                .setReceiver(ByteString.copyFrom(getPublicKeyReceiver)).build();
     }
 
     @Override

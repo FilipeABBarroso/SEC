@@ -13,6 +13,7 @@ import tecnico.sec.proto.exceptions.BalanceExceptions;
 import tecnico.sec.proto.exceptions.BaseException;
 import tecnico.sec.proto.exceptions.NonceExceptions;
 
+import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
@@ -118,6 +119,25 @@ public class ServiceImpl extends ServiceImplBase {
     }
 
     @Override
+    public void updateTransactions(UpdateTransactionsRequest request, StreamObserver<Ack> responseObserver) {
+        //todo update -- transactions mal assinadas(done) -- check signatures(done)
+        responseObserver.onNext(Ack.newBuilder().build());
+        responseObserver.onCompleted();
+
+        try {
+            List<Transaction> transactions = request.getTransactionsList();
+            for (int i = 0; i < request.getServersList().size(); i++) {
+                PublicKey serverPublicKey = KeyStore.stringToPublicKey(request.getServersList().get(i));
+                ServerInfo.serverPublicKeyExists(serverPublicKey);
+                Sign.checkSignature(serverPublicKey.getEncoded(),request.getSignaturesList().get(i).toByteArray(),transactions);
+            }
+            //todo update transactions
+        } catch(BaseException e){
+            System.out.println("Problems Updating");
+        }
+    }
+
+    @Override
     public void sendAmount(SendAmountRequest request, StreamObserver<SendAmountResponse> responseObserver) {
         byte[] publicKeySource = request.getPublicKeySource().toByteArray();
         byte[] publicKeyDestination = request.getPublicKeyDestination().toByteArray();
@@ -159,12 +179,12 @@ public class ServiceImpl extends ServiceImplBase {
 
         try {
             int balance = Balance.getBalance(publicKey);
-            List<String> transactions = Transactions.getPendingTransactions(publicKey);
+            List<Transaction> transactions = Transactions.getPendingTransactions(publicKey);
             CheckAccountResponse.Builder builder = CheckAccountResponse.newBuilder();
             builder.addAllTransactions(transactions);
             builder.setBalance(balance);
-            byte[] signedFields = Sign.signMessage(balance , builder.getTransactionsList().toArray());
-            builder.setSignature(ByteString.copyFrom(signedFields));
+            byte[] selfSignedFields = Sign.signMessage(balance , builder.getTransactionsList().toArray());
+            //builder.setSignatures(ByteString.copyFrom(signedFields));
             responseObserver.onNext(builder.build());
             responseObserver.onCompleted();
         } catch (BaseException e) {
@@ -231,7 +251,7 @@ public class ServiceImpl extends ServiceImplBase {
         byte[] publicKey = request.getPublicKey().toByteArray();
 
         try {
-            List<String> transactions = Transactions.getTransactions(publicKey);
+            List<Transaction> transactions = Transactions.getTransactions(publicKey);
             AuditResponse.Builder builder = AuditResponse.newBuilder();
             builder.addAllTransactions(transactions);
             byte[] signedFields = Sign.signMessage(builder.getTransactionsList().toArray());

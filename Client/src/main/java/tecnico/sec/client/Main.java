@@ -6,6 +6,7 @@ import java.util.Scanner;
 import com.google.protobuf.ProtocolStringList;
 import org.javatuples.Pair;
 import tecnico.sec.KeyStore.singletons.KeyStore;
+import tecnico.sec.grpc.Transaction;
 import tecnico.sec.proto.exceptions.KeyExceptions;
 
 public class Main {
@@ -93,7 +94,7 @@ public class Main {
     }
 
     public static void check_account_request() {
-        Pair<Integer, List<String>> res = Client.check_account();
+        Pair<Integer, List<Transaction>> res = Client.check_account();
         if (res!=null) {
             System.out.println("Balance : " + res.getValue0());
             listTransactions(res.getValue1());
@@ -113,7 +114,7 @@ public class Main {
             System.out.println("Public key not valid!");
             return;
         }
-        List<String> res = Client.audit(destinationPubKey);
+        List<Transaction> res = Client.audit(destinationPubKey);
         if(res != null){
             listTransactions(res);
         } else {
@@ -121,11 +122,14 @@ public class Main {
         }
     }
 
-    private static void listTransactions(List<String> transactions) {
+    private static void listTransactions(List<Transaction> transactions) {
         if(transactions.isEmpty()){
             System.out.println("No transactions!");
             return;
         }
-        transactions.forEach(System.out::println);
+        for(Transaction t : transactions) {
+            System.out.println("[" + t.getId() + "]" + " amount: " + t.getAmount() + "\nFrom: " +
+                    KeyStore.byteArrayToString(t.getSender().toByteArray()) + "\nTo: " + KeyStore.byteArrayToString(t.getReceiver().toByteArray()) + "\n");
+        }
     }
 }

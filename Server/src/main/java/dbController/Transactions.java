@@ -123,8 +123,8 @@ public class Transactions {
         }
     }
 
-    synchronized public static List<String> getPendingTransactions(byte[] publicKey) throws TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.PublicKeyNotFoundException {
-        ArrayList<String> list = new ArrayList<>();
+    synchronized public static List<tecnico.sec.grpc.Transaction> getPendingTransactions(byte[] publicKey) throws TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.PublicKeyNotFoundException {
+        List<tecnico.sec.grpc.Transaction> list = new ArrayList<>();
         try {
             Balance.getBalance(publicKey);
         }catch (BalanceExceptions.PublicKeyNotFoundException e ){
@@ -140,7 +140,7 @@ public class Transactions {
             while (rs.next()) {
                 Transaction t = new Transaction(rs.getBytes("publicKeySender"), rs.getBytes("publicKeySender"),
                         rs.getInt("amount"), rs.getInt("id"));
-                list.add(t.toString());
+                list.add(t.toTransactionGrpc());
             }
         } catch (SQLException e) {
             System.out.println(e);
@@ -149,8 +149,8 @@ public class Transactions {
         return list;
     }
 
-    synchronized public static List<String> getTransactions(byte[] publicKey) throws TransactionsExceptions.ReceiverPublicKeyNotFoundException, TransactionsExceptions.PublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException {
-        ArrayList<String> list = new ArrayList<>();
+    synchronized public static List<tecnico.sec.grpc.Transaction> getTransactions(byte[] publicKey) throws TransactionsExceptions.ReceiverPublicKeyNotFoundException, TransactionsExceptions.PublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException {
+        ArrayList<tecnico.sec.grpc.Transaction> list = new ArrayList<>();
 
         Connection conn = DBConnection.getConnection();
 
@@ -161,7 +161,7 @@ public class Transactions {
             while (rs.next()) {
                 Transaction t = new Transaction(rs.getBytes("publicKeySender"), rs.getBytes("publicKeySender"),
                         rs.getInt("amount"), rs.getInt("id"));
-                list.add(t.toString());
+                list.add(t.toTransactionGrpc());
             }
         } catch (SQLException e) {
             System.out.println(e);

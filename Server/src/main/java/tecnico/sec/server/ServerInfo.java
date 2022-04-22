@@ -6,6 +6,7 @@ import io.grpc.Status;
 import tecnico.sec.KeyStore.singletons.KeyStore;
 import tecnico.sec.grpc.ServiceGrpc;
 import tecnico.sec.proto.exceptions.BaseException;
+import tecnico.sec.proto.exceptions.KeyExceptions;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -46,6 +47,15 @@ public class ServerInfo {
                 .usePlaintext()
                 .build();
         return ServiceGrpc.newStub(channel);
+    }
+
+    public static void serverPublicKeyExists(PublicKey publicKey) throws KeyExceptions.InvalidPublicKeyException {
+        for(Server s : serverList){
+            if(publicKey.equals(s.getPublicKey())){
+                return;
+            }
+        }
+        throw new KeyExceptions.InvalidPublicKeyException();
     }
 
 }

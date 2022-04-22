@@ -2,11 +2,23 @@ syntax = "proto3";
 option java_multiple_files = true;
 package tecnico.sec.grpc;
 
+message Error {
+  oneof request {
+    NonceResponse nonceResponse = 1;
+    OpenAccountResponse openAccountResponse = 2;
+  }
+  string message = 3;
+  bytes signature = 4;
+}
+
 message NonceRequest {
   bytes publicKey = 1;
 }
 message NonceResponse {
-  int32 nonce = 1;
+  oneof response {
+    int32 nonce = 1;
+    Error error = 2;
+  }
 }
 
 message OpenAccountRequest {
@@ -14,8 +26,7 @@ message OpenAccountRequest {
   bytes signature = 2;
 }
 message OpenAccountResponse {
-  repeated string servers = 1;
-  repeated bytes signatures = 2;
+  bytes signature = 1;
 }
 
 message SendAmountRequest {
@@ -26,18 +37,16 @@ message SendAmountRequest {
   bytes signature = 5;
 }
 message SendAmountResponse {
-  repeated string servers = 1;
-  repeated bytes signatures = 2;
+  bytes signature = 1;
 }
 
 message ReceiveAmountRequest {
   bytes publicKey = 1;
   int32 transactionID = 2;
-  bytes signature = 4;
+  bytes signature = 3;
 }
 message ReceiveAmountResponse {
-  repeated string servers = 1;
-  repeated bytes signatures = 2;
+  bytes signatures = 1;
 }
 
 message CheckAccountRequest {
@@ -45,24 +54,30 @@ message CheckAccountRequest {
 }
 message CheckAccountResponse {
   int32 balance = 1;
-  repeated string transactions = 2;
-  repeated string servers = 3;
-  repeated bytes signatures = 4;
+  repeated Transaction transactions = 2;
+  bytes signature = 3;
 }
 
 message AuditRequest {
   bytes publicKey = 1;
 }
 message AuditResponse {
-  repeated string transactions = 1;
-  repeated string servers = 3;
-  repeated bytes signatures = 4;
+  repeated Transaction transactions = 1;
+  bytes signature = 2;
 }
 
 message UpdateTransactionsRequest {
   repeated Transaction transactions = 1;
-  repeated string servers = 3;
-  repeated bytes signatures = 4;
+  Quorum quorum = 2;
+}
+
+message Quorum {
+  repeated Server serverMessages = 1;
+}
+
+message Server {
+  string publicKey = 1;
+  bytes signature = 2;
 }
 
 message Transaction {
@@ -70,10 +85,10 @@ message Transaction {
   bytes sender = 2;
   bytes receiver = 3;
   int32 amount = 4;
+  bool accepted = 5;
 }
 
 message Ack {
-  string ack = 1;
 }
 
 service Service {

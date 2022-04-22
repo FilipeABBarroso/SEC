@@ -162,7 +162,7 @@ public class Client {
         checkSignature(serverPublicKey, signature, accountPublicKey, transactionID);
     }
 
-    public static Pair<Integer, List<String>> check_account() {
+    public static Pair<Integer, List<Transaction>> check_account() {
         try {
             PublicKey pubKey = KeyStore.getPublicKey();
             byte[] pubKeyField = pubKey.getEncoded();
@@ -173,7 +173,7 @@ public class Client {
 
             for (ServerInfo server : ServerConnection.getConnection()) {
                 CheckAccountResponse checkAccountResponse = server.getStub().checkAccount(request);
-                Pair<Integer, List<String>> result = Pair.with(checkAccountResponse.getBalance(), checkAccountResponse.getTransactionsList());
+                Pair<Integer, List<Transaction>> result = Pair.with(checkAccountResponse.getBalance(), checkAccountResponse.getTransactionsList());
                 try {
                     checkAccountCheckResponseSignatures(checkAccountResponse);
                 } catch (BaseException ignored) {
@@ -203,7 +203,7 @@ public class Client {
         checkSignature(serverPublicKey, signature, balance, transactionList);
     }
 
-    public static List<String> audit(PublicKey key) {
+    public static List<Transaction> audit(PublicKey key) {
         try {
             AuditRequest request = AuditRequest.newBuilder()
                     .setPublicKey(ByteString.copyFrom(key.getEncoded()))
@@ -211,7 +211,7 @@ public class Client {
 
             for (ServerInfo server : ServerConnection.getConnection()) {
                 AuditResponse auditResponse = server.getStub().audit(request);
-                List<String> result = auditResponse.getTransactionsList();
+                List<Transaction> result = auditResponse.getTransactionsList();
                 try {
                     auditCheckResponseSignatures(auditResponse);
                 } catch (BaseException ignored) {
