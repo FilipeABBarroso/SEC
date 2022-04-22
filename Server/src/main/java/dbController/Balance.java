@@ -24,7 +24,7 @@ public class Balance {
         }
     }
 
-    synchronized public static int openAccount(byte[] publicKey) throws BalanceExceptions.PublicKeyAlreadyExistException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.FailInsertTransactionException {
+    synchronized public static void openAccount(byte[] publicKey) throws BalanceExceptions.PublicKeyAlreadyExistException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.FailInsertTransactionException {
         Connection conn = DBConnection.getConnection();
 
         try {
@@ -54,8 +54,9 @@ public class Balance {
 
             conn.commit();
 
-            return id;
+            // return id;
         } catch (SQLException e) {
+            System.out.println(e);
             if (e.getSQLState().equals(Constants.DUPLICATED_KEY)) {
                 throw new BalanceExceptions.PublicKeyAlreadyExistException();
             } else {
