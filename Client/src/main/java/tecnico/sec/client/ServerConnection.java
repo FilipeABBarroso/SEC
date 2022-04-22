@@ -7,7 +7,6 @@ import org.javatuples.Pair;
 import tecnico.sec.KeyStore.singletons.KeyStore;
 import tecnico.sec.grpc.ServiceGrpc;
 import tecnico.sec.proto.exceptions.BaseException;
-import tecnico.sec.proto.exceptions.KeyExceptions;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -16,21 +15,57 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+class ServerInfo{
+
+    private final ServiceGrpc.ServiceBlockingStub stub;
+    private final String host;
+    private final int port;
+    private final PublicKey publicKey;
+
+    public ServerInfo(String host, int port, PublicKey publicKey) {
+        this.host = host;
+        this.port = port;
+        this.publicKey = publicKey;
+        ManagedChannel channel = ManagedChannelBuilder
+                .forAddress(host, port)
+                .usePlaintext()
+                .build();
+        this.stub = ServiceGrpc.newBlockingStub(channel);
+    }
+
+
+    public ServiceGrpc.ServiceBlockingStub getStub() {
+        return stub;
+    }
+
+    public String getHost() {
+        return host;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public PublicKey getPublicKey() {
+        return publicKey;
+    }
+}
+
 public class ServerConnection {
 
-    private static List<Pair<ServiceGrpc.ServiceStub, PublicKey>> servers;
+    private static List<ServerInfo> servers;
     private static int count;
 
     private static void initConnection(){
         servers = new ArrayList<>();
         try {
-            File myObj = new File("servers.txt");
+            File myObj = new File("serversInfo.txt");
             Scanner myReader = new Scanner(myObj);
             while (myReader.hasNextLine()) {
                 String[] data = myReader.nextLine().split("-");
                 try {
                     PublicKey publicKey = KeyStore.stringToPublicKey(data[1]);
-                    servers.add(Pair.with(replicaConnection("localhost", Integer.parseInt(data[0])), publicKey));
+                    servers.add(new ServerInfo("localhost",Integer.parseInt(data[0]),publicKey));
                 } catch (BaseException e) {
                     Status status = Status.fromThrowable(e);
                     System.out.println("ERROR : " + status.getCode() + " : " + status.getDescription());
@@ -43,15 +78,7 @@ public class ServerConnection {
         }
     }
 
-    private static ServiceGrpc.ServiceStub replicaConnection(String host, int port) {
-        ManagedChannel channel = ManagedChannelBuilder
-                .forAddress(host, port)
-                .usePlaintext()
-                .build();
-        return ServiceGrpc.newStub(channel); //todo executors
-    }
-
-    public static List<Pair<ServiceGrpc.ServiceStub, PublicKey>> getConnection() {
+    public static List<ServerInfo> getConnection() {
         if(servers == null){
             initConnection();
         }
@@ -70,6 +97,15 @@ public class ServerConnection {
 
     public static int getServerCount(){
         return count;
+    }
+
+    public static boolean existsPublicKey(PublicKey publicKey) {
+        for(ServerInfo s : servers) {
+            if(publicKey.equals(s.getPublicKey())) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }
