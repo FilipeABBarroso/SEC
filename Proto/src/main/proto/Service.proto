@@ -57,8 +57,11 @@ message AuditResponse {
 service Service {
   rpc getNonce(NonceRequest) returns (NonceResponse);
   rpc openAccount(OpenAccountRequest) returns (OpenAccountResponse);
+  rpc broadCastOpenAccount(OpenAccountRequest) returns (OpenAccountResponse);
   rpc sendAmount(SendAmountRequest) returns (SendAmountResponse);
   rpc receiveAmount(ReceiveAmountRequest) returns (ReceiveAmountResponse);
   rpc checkAccount(CheckAccountRequest) returns (CheckAccountResponse);
+  rpc broadCastCheckAccount(CheckAccountRequest) returns (CheckAccountResponse);
+  rpc updateCheckAccount(CheckAccountRequest) returns (CheckAccountResponse);
   rpc Audit(AuditRequest) returns (AuditResponse);
 }

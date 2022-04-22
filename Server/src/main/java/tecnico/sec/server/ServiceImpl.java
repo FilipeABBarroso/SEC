@@ -4,6 +4,8 @@ import dbController.Balance;
 import dbController.Nonce;
 import dbController.Transactions;
 import io.grpc.stub.StreamObserver;
+import org.javatuples.Pair;
+import tecnico.sec.KeyStore.singletons.KeyStore;
 import tecnico.sec.KeyStore.singletons.Sign;
 import tecnico.sec.grpc.*;
 import tecnico.sec.grpc.ServiceGrpc.ServiceImplBase;
@@ -12,7 +14,11 @@ import tecnico.sec.proto.exceptions.BaseException;
 import tecnico.sec.proto.exceptions.NonceExceptions;
 
 import java.security.SecureRandom;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.CountDownLatch;
+
+import static java.util.stream.Collectors.counting;
+import static java.util.stream.Collectors.groupingBy;
 
 public class ServiceImpl extends ServiceImplBase {
 
@@ -50,6 +56,64 @@ public class ServiceImpl extends ServiceImplBase {
             responseObserver.onCompleted();
         } catch (BaseException e) {
             responseObserver.onError(e.toResponseException());
+        }
+    }
+
+    @Override
+    public void broadCastOpenAccount(OpenAccountRequest request , StreamObserver<OpenAccountResponse> responseObserver){
+        List<Pair<String,Object>> responses = new ArrayList<>();
+        CountDownLatch latch = new CountDownLatch(ServerInfo.getServerList().size() / 2 + 1);
+        for(Server server : ServerInfo.getServerList()){
+            server.getConnection().openAccount(request, new StreamObserver<>() {
+                @Override
+                public void onNext(OpenAccountResponse response) {
+                    synchronized (latch) {
+                        if (latch.getCount() != 0) {
+                            try {
+                                Sign.checkSignature(server.getPublicKey().getEncoded() , response.getSignature().toByteArray() , request.getPublicKey().toByteArray());
+                                responses.add(Pair.with(KeyStore.publicKeyToString(server.getPublicKey()) ,response));
+                            }catch (Exception e) {
+                                System.out.println(e);
+                            }
+                            latch.countDown();
+                        }
+                    }
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    synchronized (latch) {
+                        if (latch.getCount() != 0) {
+                            responses.add(Pair.with(KeyStore.publicKeyToString(server.getPublicKey()) ,t));
+                            latch.countDown();
+                        }
+                    }
+                }
+
+                @Override
+                public void onCompleted() {
+                }
+            });
+        }
+        try {
+            latch.await();
+
+            Map<Object, Long> count = responses.stream().collect(groupingBy(p -> p.getValue1().getClass(), counting()));
+            System.out.println(count);
+            Map.Entry<Object , Long> max = Collections.max(count.entrySet(), Comparator.comparing(Map.Entry::getValue));
+            System.out.println(max.getKey());
+            System.out.println(OpenAccountResponse.class);
+            System.out.println(max.getKey() instanceof OpenAccountResponse);
+            if (max.getKey() instanceof OpenAccountResponse) {
+                System.out.println("Entrou");
+                responseObserver.onNext(null);
+                responseObserver.onCompleted();
+            }
+            else{
+                responseObserver.onError(null);
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 
@@ -105,6 +169,60 @@ public class ServiceImpl extends ServiceImplBase {
             responseObserver.onCompleted();
         } catch (BaseException e) {
             responseObserver.onError(e.toResponseException());
+        }
+    }
+
+    @Override
+    public void broadCastCheckAccount(CheckAccountRequest request, StreamObserver<CheckAccountResponse> responseObserver) {
+        List<CheckAccountResponse> responses = new ArrayList<>();
+        CountDownLatch latch = new CountDownLatch(ServerInfo.getServerList().size() / 2 + 1);
+        for(Server server : ServerInfo.getServerList()){
+            server.getConnection().checkAccount(request, new StreamObserver<>() {
+                @Override
+                public void onNext(CheckAccountResponse response) {
+                    synchronized (latch) {
+                        if (latch.getCount() != 0) {
+                            try {
+                                Sign.checkSignature(server.getPublicKey().getEncoded() , response.getSignature().toByteArray() , request.getPublicKey().toByteArray());
+                                responses.add(response);
+                            }catch (Exception e) {
+                                System.out.println(e);
+                            }
+                            latch.countDown();
+                        }
+                    }
+                }
+
+                @Override
+                public void onError(Throwable t) {
+                    synchronized (latch) {
+                        if (latch.getCount() != 0) {
+                            System.out.println(t.getMessage());
+                            responses.add(null);
+                            latch.countDown();
+                        }
+                    }
+                }
+
+                @Override
+                public void onCompleted() {
+                }
+            });
+        }
+        try {
+            latch.await();
+            int good = 0;
+            int bad = 0;
+            for(CheckAccountResponse response:responses){
+                if(response == null) bad++;
+                else good++;
+            }
+            System.out.println(good);
+            System.out.println(bad);
+            responseObserver.onNext(responses.get(0));
+            responseObserver.onCompleted();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 

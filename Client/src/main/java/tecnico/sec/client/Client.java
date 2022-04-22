@@ -29,7 +29,7 @@ public class Client {
             PublicKey publicKey = KeyStore.getPublicKey();
             byte[] pubKeyField = publicKey.getEncoded();
             byte[] signature = signMessage(pubKeyField);
-            OpenAccountResponse openAccountResponse = ServerConnection.getConnection().openAccount(OpenAccountRequest.newBuilder()
+            OpenAccountResponse openAccountResponse = ServerConnection.getConnection().broadCastOpenAccount(OpenAccountRequest.newBuilder()
                     .setPublicKey(ByteString.copyFrom(pubKeyField))
                     .setSignature(ByteString.copyFrom(signature))
                     .build());
