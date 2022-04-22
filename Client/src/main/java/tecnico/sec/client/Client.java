@@ -37,7 +37,7 @@ public class Client {
                     .setSignature(ByteString.copyFrom(signature))
                     .build();
 
-            List<WriteResponse> replies = new ArrayList<>();
+            List<WriteResponse> replies = Collections.synchronizedList(new ArrayList<>());
             CountDownLatch latch = new CountDownLatch(ServerConnection.getServerCount() / 2 + 1);
 
             for (ServerInfo server : ServerConnection.getConnection()) {
@@ -48,12 +48,16 @@ public class Client {
                             switch (response.getResponseCase()) {
                                 case OPENACCOUNT -> {
                                     openAccountCheckResponse(server.getPublicKey().getEncoded(), response.getOpenAccount().getSignature().toByteArray(), pubKeyField);
-                                    replies.add(new WriteResponse(response, false, ""));
+                                    synchronized (replies) {
+                                        replies.add(new WriteResponse(response, false, ""));
+                                    }
                                     latch.countDown();
                                 }
                                 case ERROR -> {
                                     errorCheckSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),pubKeyField,response.getError().getMessage());
-                                    replies.add(new WriteResponse(response, true, response.getError().getMessage()));
+                                    synchronized (replies) {
+                                        replies.add(new WriteResponse(response, true, response.getError().getMessage()));
+                                    }
                                     latch.countDown();
                                 }
                                 case RESPONSE_NOT_SET -> {
@@ -99,7 +103,7 @@ public class Client {
 
             NonceRequest nonceRequest = NonceRequest.newBuilder().setPublicKey(ByteString.copyFrom(sourceField)).build();
 
-            List<WriteResponse> replies = new ArrayList<>();
+            List<WriteResponse> replies = Collections.synchronizedList(new ArrayList<>());
             CountDownLatch latch = new CountDownLatch(ServerConnection.getServerCount() / 2 + 1);
 
             for (ServerInfo server : ServerConnection.getConnection()) {
@@ -128,12 +132,16 @@ public class Client {
                                                 switch (response.getResponseCase()) {
                                                     case SENDAMOUNT -> {
                                                         sendAmountCheckResponse(server.getPublicKey().getEncoded(), response.getSendAmount().getSignature().toByteArray(), sourceField, destinationField, amount, nonce + 1);
-                                                        replies.add(new WriteResponse(response, false, ""));
+                                                        synchronized (replies) {
+                                                            replies.add(new WriteResponse(response, false, ""));
+                                                        }
                                                         latch.countDown();
                                                     }
                                                     case ERROR -> {
                                                         checkSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),sourceField,destinationField,amount,nonce + 1,response.getError().getMessage());
-                                                        replies.add(new WriteResponse(response, true, response.getError().getMessage()));
+                                                        synchronized (replies) {
+                                                            replies.add(new WriteResponse(response, true, response.getError().getMessage()));
+                                                        }
                                                         latch.countDown();
                                                     }
                                                     case RESPONSE_NOT_SET -> {
@@ -196,7 +204,7 @@ public class Client {
                     .setSignature(ByteString.copyFrom(signature))
                     .build();
 
-            List<WriteResponse> replies = new ArrayList<>();
+            List<WriteResponse> replies = Collections.synchronizedList(new ArrayList<>());
             CountDownLatch latch = new CountDownLatch(ServerConnection.getServerCount() / 2 + 1);
 
             for (ServerInfo server : ServerConnection.getConnection()) {
@@ -207,12 +215,16 @@ public class Client {
                             switch (response.getResponseCase()) {
                                 case RECEIVEAMOUNT -> {
                                     receiveAmountCheckResponse(server.getPublicKey().getEncoded(), response.getReceiveAmount().getSignature().toByteArray(), pubKeyField, transactionID);
-                                    replies.add(new WriteResponse(response, false, ""));
+                                    synchronized (replies) {
+                                        replies.add(new WriteResponse(response, false, ""));
+                                    }
                                     latch.countDown();
                                 }
                                 case ERROR -> {
                                     checkSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),pubKeyField,transactionID,response.getError().getMessage());
-                                    replies.add(new WriteResponse(response, true, response.getError().getMessage()));
+                                    synchronized (replies) {
+                                        replies.add(new WriteResponse(response, true, response.getError().getMessage()));
+                                    }
                                     latch.countDown();
                                 }
                                 case RESPONSE_NOT_SET -> {
@@ -255,7 +267,7 @@ public class Client {
                     .setPublicKey(ByteString.copyFrom(pubKeyField))
                     .build();
 
-            List<ReadResponse> replies = new ArrayList<>();
+            List<ReadResponse> replies = Collections.synchronizedList(new ArrayList<>());
             CountDownLatch latch = new CountDownLatch(ServerConnection.getServerCount() / 2 + 1);
 
             for (ServerInfo server : ServerConnection.getConnection()) {
@@ -266,12 +278,16 @@ public class Client {
                             switch (response.getResponseCase()) {
                                 case CHECKACCOUNT -> {
                                     checkAccountCheckResponse(server.getPublicKey().getEncoded(), response.getCheckAccount().getSignature().toByteArray(), response.getCheckAccount().getBalance(), response.getCheckAccount().getTransactionsList().toArray());
-                                    replies.add(new ReadResponse(response, false, "", response.getCheckAccount().getTransactionsList()));
+                                    synchronized (replies) {
+                                        replies.add(new ReadResponse(server, response, false, "", response.getCheckAccount().getTransactionsList(),response.getCheckAccount().getBalance()));
+                                    }
                                     latch.countDown();
                                 }
                                 case ERROR -> {
                                     errorCheckSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),pubKeyField,response.getError().getMessage());
-                                    replies.add(new ReadResponse(response, true, response.getError().getMessage(),new ArrayList<>()));
+                                    synchronized (replies) {
+                                        replies.add(new ReadResponse(server, response, true, response.getError().getMessage(), new ArrayList<>(),0));
+                                    }
                                     latch.countDown();
                                 }
                                 case RESPONSE_NOT_SET -> {
@@ -295,7 +311,7 @@ public class Client {
             System.out.println(response.getMessage());
             if(!response.isError()){
                 //todo return to user and update servers?
-                //return response.getTransactions();
+                return Pair.with(response.getBalance(),response.getTransactions());
             }
         } catch (BaseException | InterruptedException e) {
             Status status = Status.fromThrowable(e);
@@ -315,7 +331,7 @@ public class Client {
                     .setPublicKey(ByteString.copyFrom(pubKeyField))
                     .build();
 
-            List<ReadResponse> replies = new ArrayList<>();
+            List<ReadResponse> replies = Collections.synchronizedList(new ArrayList<>());
             CountDownLatch latch = new CountDownLatch(ServerConnection.getServerCount() / 2 + 1);
 
             for (ServerInfo server : ServerConnection.getConnection()) {
@@ -326,12 +342,16 @@ public class Client {
                             switch (response.getResponseCase()) {
                                 case AUDIT -> {
                                     auditCheckResponse(server.getPublicKey().getEncoded(), response.getAudit().getSignature().toByteArray(), response.getAudit().getTransactionsList().toArray());
-                                    replies.add(new ReadResponse(response, false, "", response.getAudit().getTransactionsList()));
+                                    synchronized (replies) {
+                                        replies.add(new ReadResponse(server, response, false, "", response.getAudit().getTransactionsList(),0));
+                                    }
                                     latch.countDown();
                                 }
                                 case ERROR -> {
                                     errorCheckSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),pubKeyField,response.getError().getMessage());
-                                    replies.add(new ReadResponse(response, true, response.getError().getMessage(),new ArrayList<>()));
+                                    synchronized (replies) {
+                                        replies.add(new ReadResponse(server, response, true, response.getError().getMessage(), new ArrayList<>(),0));
+                                    }
                                     latch.countDown();
                                 }
                                 case RESPONSE_NOT_SET -> {
@@ -366,6 +386,13 @@ public class Client {
 
     public static void auditCheckResponse(byte[] serverPublicKey, byte[] signature, Object[] transactionList) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, SignatureExceptions.SignatureDoNotMatchException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException {
         checkSignature(serverPublicKey, signature, transactionList);
+    }
+
+    public static void updateServers(List<ReadResponse> responses, ReadResponse result,List<ServerInfo> serverToUpdate) {
+        List<ReadResponse> responsesQuorum = ReadResponse.getResponseQuorum(responses, result);
+        for (ServerInfo s : serverToUpdate) {
+            //todo call endpoint --
+        }
     }
 
 

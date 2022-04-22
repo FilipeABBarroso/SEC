@@ -6,17 +6,21 @@ import java.util.*;
 
 public class ReadResponse {
 
+    private final ServerInfo server;
     private final Object response;
     private final boolean isError;
     private final String message;
     private final List<Transaction> transactions;
+    private final int balance;
 
 
-    public ReadResponse(Object response, boolean isError, String message, List<Transaction> transactions) {
+    public ReadResponse(ServerInfo server, Object response, boolean isError, String message, List<Transaction> transactions, int balance) {
+        this.server = server;
         this.response = response;
         this.isError = isError;
         this.message = message;
         this.transactions = transactions;
+        this.balance = balance;
     }
 
     @Override
@@ -46,6 +50,16 @@ public class ReadResponse {
         return max.getKey();
     }
 
+    public static List<ReadResponse> getResponseQuorum(List<ReadResponse> responseList, ReadResponse result) {
+        List<ReadResponse> responsesQuorum = new ArrayList<>();
+        for(ReadResponse r : responseList) {
+            if(r.equals(result)) {
+                responsesQuorum.add(r);
+            }
+        }
+        return responsesQuorum;
+    }
+
     public String getMessage() {
         return message;
     }
@@ -60,5 +74,9 @@ public class ReadResponse {
 
     public List<Transaction> getTransactions() {
         return transactions;
+    }
+
+    public int getBalance() {
+        return balance;
     }
 }
