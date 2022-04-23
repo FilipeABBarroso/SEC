@@ -56,7 +56,12 @@ public class Balance {
 
             // return id;
         } catch (SQLException e) {
-            if (e.getSQLState().equals(Constants.DUPLICATED_KEY)) {
+            if (e.getSQLState().equals(Constants.DUPLICATED_KEY) || e.getSQLState().equals(Constants.DUPLICATED_DUPLICATED_KEY)) {
+                try {
+                    conn.commit();
+                } catch (SQLException ex) {
+                    throw new RuntimeException(ex);
+                }
                 throw new BalanceExceptions.PublicKeyAlreadyExistException();
             } else {
                 throw new BalanceExceptions.GeneralMYSQLException();
