@@ -37,23 +37,26 @@ public class Transactions {
 
             conn.setAutoCommit(false);
 
-            CallableStatement cs = conn.prepareCall("{ ? = call add_transaction(?, ?, ?, ?::statusOptions, ?, ?) }");
-            cs.registerOutParameter(1, Types.INTEGER);
-            cs.setBytes(2, publicKeySender);
-            cs.setBytes(3, publicKeyReceiver);
-            cs.setInt(4, amount);
-            cs.setString(5, "Pending");
-            cs.setInt(6, nonce);
-            cs.setBytes(7, signature);
-            cs.executeUpdate();
+            // TODO: adicionar senderTransactionId
+            //PreparedStatements.getAddTransaction().setInt(1, senderTransactionId);
+            PreparedStatements.getAddTransaction().setBytes(1, publicKeySender);
+            PreparedStatements.getAddTransaction().setBytes(2, publicKeyReceiver);
+            PreparedStatements.getAddTransaction().setInt(3, amount);
+            PreparedStatements.getAddTransaction().setString(4, "Pending");
+            PreparedStatements.getAddTransaction().setInt(5, nonce);
+            PreparedStatements.getAddTransaction().setBytes(6, signature);
+            if(PreparedStatements.getAddTransaction().executeUpdate() == 0) {
+                throw new TransactionsExceptions.FailInsertTransactionException();
+            }
 
-            int id = cs.getInt(1);
+            // FIXME: valor martelado q vai ser igual ao senderTransactionId
+            int id = 1;
 
             // update sender balance
             int updatedBalance = Balance.getBalance(publicKeySender) - amount;
             PreparedStatements.getUpdateBalancePS().setInt(1, updatedBalance);
-            PreparedStatements.getUpdateBalancePS().setInt(2, id);
-            PreparedStatements.getUpdateBalancePS().setBytes(3, publicKeySender);
+            // PreparedStatements.getUpdateBalancePS().setInt(2, id);
+            PreparedStatements.getUpdateBalancePS().setBytes(2, publicKeySender);
             if (PreparedStatements.getUpdateBalancePS().executeUpdate() == 0) {
                 throw new TransactionsExceptions.SenderPublicKeyNotFoundException();
             }
@@ -64,6 +67,7 @@ public class Transactions {
 
             conn.commit();
         } catch (SQLException e) {
+            System.out.println(e);
             if (e.getSQLState().equals(Constants.FOREIGN_KEY_DONT_EXISTS)) {
                 if (e.getMessage().contains("receiver")){
                     throw new TransactionsExceptions.ReceiverPublicKeyNotFoundException();
@@ -111,7 +115,10 @@ public class Transactions {
 
             // update receiver balance
             int updatedBalance = Balance.getBalance(pkAndAmountRs.getBytes("publicKeyReceiver")) + pkAndAmountRs.getInt("amount");
+            // TODO: adicionar lastTransactionId
+            // int lastTransactionId = Balance.getBalance(pkAndAmountRs.getBytes("publicKeyReceiver")) + pkAndAmountRs.getInt("amount");
             PreparedStatements.getUpdateBalancePS().setInt(1, updatedBalance);
+            // PreparedStatements.getUpdateBalancePS().setInt(2, lastTransactionId);
             PreparedStatements.getUpdateBalancePS().setBytes(2, pkAndAmountRs.getBytes("publicKeyReceiver"));
             if (PreparedStatements.getUpdateBalancePS().executeUpdate() == 0) {
                 throw new TransactionsExceptions.ReceiverPublicKeyNotFoundException();

@@ -118,9 +118,9 @@ public class ServiceImpl extends ServiceImplBase {
         } catch (BaseException e) {
             try {
                 //responseObserver.onError(ex);
-                String errorMessage = e.getMessage();
+                String errorMessage = e.toResponseException().getMessage();
                 byte[] signedPublicKey = Sign.signMessage(publicKeySource , publicKeyDestination , amount , nonce + 1,errorMessage);
-                Error error = Error.newBuilder().setMessage(e.getMessage()).setSignature(ByteString.copyFrom(signedPublicKey)).build();
+                Error error = Error.newBuilder().setMessage(errorMessage).setSignature(ByteString.copyFrom(signedPublicKey)).build();
                 responseObserver.onNext(SendAmountResponse.newBuilder().setError(error).build());
                 responseObserver.onCompleted();
             } catch (BaseException ignored){
@@ -144,9 +144,9 @@ public class ServiceImpl extends ServiceImplBase {
         } catch (BaseException e) {
             try {
                 //responseObserver.onError(ex);
-                String errorMessage = e.getMessage();
+                String errorMessage = e.toResponseException().getMessage();
                 byte[] signedPublicKey = Sign.signMessage(publicKey , transactionID, errorMessage);
-                Error error = Error.newBuilder().setMessage(e.getMessage()).setSignature(ByteString.copyFrom(signedPublicKey)).build();
+                Error error = Error.newBuilder().setMessage(errorMessage).setSignature(ByteString.copyFrom(signedPublicKey)).build();
                 responseObserver.onNext(ReceiveAmountResponse.newBuilder().setError(error).build());
                 responseObserver.onCompleted();
             } catch (BaseException ignored){

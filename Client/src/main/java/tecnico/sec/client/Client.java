@@ -180,7 +180,7 @@ public class Client {
             latch.await();
             WriteResponse response = WriteResponse.getResult(replies);
             System.out.println(response.getMessage());
-            return response.isError();
+            return !response.isError();
         } catch (BaseException | InterruptedException e) {
             Status status = Status.fromThrowable(e);
             System.out.println("ERROR : " + status.getCode() + " : " + status.getDescription());
@@ -246,7 +246,7 @@ public class Client {
             latch.await();
             WriteResponse response = WriteResponse.getResult(replies);
             System.out.println(response.getMessage());
-            return response.isError();
+            return !response.isError();
         } catch (BaseException | InterruptedException e) {
             Status status = Status.fromThrowable(e);
             System.out.println("ERROR : " + status.getCode() + " : " + status.getDescription());
@@ -268,7 +268,7 @@ public class Client {
                     .build();
 
             List<ReadResponse> replies = Collections.synchronizedList(new ArrayList<>());
-            CountDownLatch latch = new CountDownLatch(ServerConnection.getServerCount() / 2 + 1);
+            CountDownLatch latch = new CountDownLatch(ServerConnection.getConnection().size() / 2 + 1);
 
             for (ServerInfo server : ServerConnection.getConnection()) {
                 server.getStub().checkAccount(request,  new StreamObserver<CheckAccountResponse>() {

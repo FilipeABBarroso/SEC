@@ -79,6 +79,20 @@ public class PreparedStatements {
         return createNonce;
     }
 
+    public static PreparedStatement getAddTransaction() throws BalanceExceptions.GeneralMYSQLException {
+        Connection conn = DBConnection.getConnection();
+        if (addTransaction == null){
+            try {
+                String query = "INSERT INTO Transactions (publicKeySender, publicKeyReceiver, amount, status, nonce, signature) " + "VALUES (?,?,?,?::statusOptions,?,?);";
+                addTransaction = conn.prepareStatement(query);
+            } catch (SQLException e) {
+                System.out.println(e);
+                throw new BalanceExceptions.GeneralMYSQLException();
+            }
+        }
+        return addTransaction;
+    }
+
     public static PreparedStatement getCheckBalancePS() throws BalanceExceptions.GeneralMYSQLException {
         Connection conn = DBConnection.getConnection();
         if (checkBalance == null){
@@ -97,7 +111,7 @@ public class PreparedStatements {
         Connection conn = DBConnection.getConnection();
         if (updateBalance == null){
             try {
-                String query = "UPDATE BALANCE set balance = ?, lastTransactionId = ? where publicKey=?;";
+                String query = "UPDATE BALANCE set balance = ? where publicKey=?;";
                 updateBalance = conn.prepareStatement(query);
             } catch (SQLException e) {
                 System.out.println(e);
