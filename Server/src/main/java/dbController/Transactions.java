@@ -11,7 +11,7 @@ import java.util.List;
 
 public class Transactions {
 
-    synchronized public static void addTransaction(byte[] publicKeySender, byte[] publicKeyReceiver, int amount, int nonce, byte[] signature) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.FailInsertTransactionException, TransactionsExceptions.SenderPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.PublicKeyNotFoundException, TransactionsExceptions.BalanceNotEnoughException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, TransactionsExceptions.AmountCanNotBeLessThenOneException, TransactionsExceptions.CanNotSendMoneyToYourselfException {
+    synchronized public static void addTransaction(byte[] publicKeySender, byte[] publicKeyReceiver, int amount, long nonce, byte[] signature) throws NonceExceptions.NonceNotFoundException, TransactionsExceptions.FailInsertTransactionException, TransactionsExceptions.SenderPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.PublicKeyNotFoundException, TransactionsExceptions.BalanceNotEnoughException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, TransactionsExceptions.AmountCanNotBeLessThenOneException, TransactionsExceptions.CanNotSendMoneyToYourselfException {
         if(amount <= 0 ){
             throw new TransactionsExceptions.AmountCanNotBeLessThenOneException();
         }
@@ -43,7 +43,7 @@ public class Transactions {
             PreparedStatements.getAddTransaction().setBytes(2, publicKeyReceiver);
             PreparedStatements.getAddTransaction().setInt(3, amount);
             PreparedStatements.getAddTransaction().setString(4, "Pending");
-            PreparedStatements.getAddTransaction().setInt(5, nonce);
+            PreparedStatements.getAddTransaction().setLong(5, nonce);
             PreparedStatements.getAddTransaction().setBytes(6, signature);
             if(PreparedStatements.getAddTransaction().executeUpdate() == 0) {
                 throw new TransactionsExceptions.FailInsertTransactionException();

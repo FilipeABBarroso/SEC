@@ -7,17 +7,25 @@ message Error {
   bytes signature = 4;
 }
 
-message NonceRequest {
+message ChallengeRequest{
   bytes publicKey = 1;
 }
-message NonceResponse {
+
+message ChallengeResponse{
   oneof response {
-    Nonce nonce = 1;
+    Challenge challenge = 1;
     Error error = 2;
   }
 }
-message Nonce{
-  int32 nonce = 1;
+
+message Challenge{
+  int32 zeros = 1;
+  int64 nonce = 2;
+}
+
+message ChallengeCompleted{
+  int32 padding = 1;
+  bytes hash = 2;
 }
 
 message OpenAccountRequest {
@@ -38,8 +46,9 @@ message SendAmountRequest {
   bytes publicKeySource = 1;
   bytes publicKeyDestination = 2;
   int32 amount = 3;
-  int32 nonce = 4;
+  int64 nonce = 4;
   bytes signature = 5;
+  ChallengeCompleted challenge = 6;
 }
 message SendAmountResponse {
   oneof response{
@@ -121,7 +130,7 @@ message Ack {
 }
 
 service Service {
-  rpc getNonce(NonceRequest) returns (NonceResponse);
+  rpc getChallenge(ChallengeRequest) returns (ChallengeResponse);
   rpc openAccount(OpenAccountRequest) returns (OpenAccountResponse);
   rpc sendAmount(SendAmountRequest) returns (SendAmountResponse);
   rpc receiveAmount(ReceiveAmountRequest) returns (ReceiveAmountResponse);

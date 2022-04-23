@@ -1,5 +1,6 @@
 package dbController;
 
+import tecnico.sec.grpc.Challenge;
 import tecnico.sec.proto.exceptions.BalanceExceptions;
 import tecnico.sec.proto.exceptions.NonceExceptions;
 import tecnico.sec.proto.exceptions.TransactionsExceptions;
@@ -11,7 +12,7 @@ import java.sql.SQLException;
 
 public class Nonce {
 
-    synchronized public static int getNonce (byte[] publicKey) throws NonceExceptions.NonceNotFoundException, BalanceExceptions.GeneralMYSQLException {
+    synchronized public static Challenge getNonce (byte[] publicKey) throws NonceExceptions.NonceNotFoundException, BalanceExceptions.GeneralMYSQLException {
         Connection conn = DBConnection.getConnection();
 
         try {
@@ -20,18 +21,20 @@ public class Nonce {
             if (!rs.next()) {
                 throw new NonceExceptions.NonceNotFoundException();
             }
-            return rs.getInt("nonce");
+            Challenge challenge = Challenge.newBuilder().setNonce(rs.getLong("nonce")).setZeros(rs.getInt("zeros")).build();
+            return challenge;
         } catch (SQLException e) {
             throw new BalanceExceptions.GeneralMYSQLException();
         }
     }
 
-    synchronized public static void createNonce(byte[] publicKey, int nonce) throws NonceExceptions.FailInsertNonceException, BalanceExceptions.GeneralMYSQLException, NonceExceptions.PublicKeyNotFoundException, NonceExceptions.NonceAlreadyExistsException {
+    synchronized public static void createNonce(byte[] publicKey, long nonce , int zeros) throws NonceExceptions.FailInsertNonceException, BalanceExceptions.GeneralMYSQLException, NonceExceptions.PublicKeyNotFoundException, NonceExceptions.NonceAlreadyExistsException {
         Connection conn = DBConnection.getConnection();
 
         try {
             PreparedStatements.getCreateNoncePS().setBytes(1, publicKey);
-            PreparedStatements.getCreateNoncePS().setInt(2, nonce);
+            PreparedStatements.getCreateNoncePS().setLong(2, nonce);
+            PreparedStatements.getCreateNoncePS().setInt(3, zeros);
             if(PreparedStatements.getCreateNoncePS().executeUpdate() == 0) {
                 throw new NonceExceptions.FailInsertNonceException();
             }

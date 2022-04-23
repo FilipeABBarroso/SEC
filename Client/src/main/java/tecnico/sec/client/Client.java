@@ -7,13 +7,13 @@ import io.grpc.stub.StreamObserver;
 import org.javatuples.Pair;
 
 import tecnico.sec.KeyStore.singletons.KeyStore;
+import tecnico.sec.KeyStore.singletons.Sign;
 import tecnico.sec.grpc.*;
 import tecnico.sec.proto.exceptions.BaseException;
 import tecnico.sec.proto.exceptions.IOExceptions;
 import tecnico.sec.proto.exceptions.KeyExceptions;
 import tecnico.sec.proto.exceptions.SignatureExceptions;
 
-import static java.util.stream.Collectors.groupingBy;
 import static tecnico.sec.KeyStore.singletons.Sign.checkSignature;
 import static tecnico.sec.KeyStore.singletons.Sign.signMessage;
 
@@ -101,28 +101,30 @@ public class Client {
             byte[] sourceField = source.getEncoded();
             byte[] destinationField = destination.getEncoded();
 
-            NonceRequest nonceRequest = NonceRequest.newBuilder().setPublicKey(ByteString.copyFrom(sourceField)).build();
+            ChallengeRequest challengeRequest = ChallengeRequest.newBuilder().setPublicKey(ByteString.copyFrom(sourceField)).build();
 
             List<WriteResponse> replies = Collections.synchronizedList(new ArrayList<>());
             CountDownLatch latch = new CountDownLatch(ServerConnection.getServerCount() / 2 + 1);
 
             for (ServerInfo server : ServerConnection.getConnection()) {
-                server.getStub().getNonce(nonceRequest,  new StreamObserver<NonceResponse>() {
+                server.getStub().getChallenge(challengeRequest,  new StreamObserver<ChallengeResponse>() {
                     @Override
-                    public void onNext(NonceResponse response) {
+                    public void onNext(ChallengeResponse response) {
                         try {
                             switch (response.getResponseCase()) {
-                                case NONCE -> {
-                                    int nonce = response.getNonce().getNonce();
+                                case CHALLENGE -> {
+                                    ChallengeCompleted result = Sign.solveChallenge(response.getChallenge().getZeros() , response.getChallenge().getNonce());
+                                    long nonce = response.getChallenge().getNonce();
 
-                                    byte[] signature = signMessage(sourceField, destinationField, amount, nonce);
+                                    byte[] signature = signMessage(sourceField, destinationField, amount, nonce + 1 , result);
 
                                     SendAmountRequest sendAmountRequest = SendAmountRequest.newBuilder()
                                             .setPublicKeySource(ByteString.copyFrom(sourceField))
                                             .setPublicKeyDestination(ByteString.copyFrom(destinationField))
                                             .setAmount(amount)
-                                            .setNonce(nonce)
+                                            .setNonce(nonce + 1)
                                             .setSignature(ByteString.copyFrom(signature))
+                                            .setChallenge(result)
                                             .build();
 
                                     server.getStub().sendAmount(sendAmountRequest, new StreamObserver<SendAmountResponse>() {
@@ -188,7 +190,7 @@ public class Client {
         return false;
     }
 
-    public static void sendAmountCheckResponse(byte[] serverPublicKey, byte[] signature, byte[] source, byte[] destination, int amount, int nonce) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, SignatureExceptions.SignatureDoNotMatchException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException {
+    public static void sendAmountCheckResponse(byte[] serverPublicKey, byte[] signature, byte[] source, byte[] destination, int amount, long nonce) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, SignatureExceptions.SignatureDoNotMatchException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException {
         checkSignature(serverPublicKey, signature, source, destination, amount, nonce);
     }
 

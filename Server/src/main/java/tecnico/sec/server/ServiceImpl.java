@@ -15,40 +15,33 @@ import tecnico.sec.proto.exceptions.BalanceExceptions;
 import tecnico.sec.proto.exceptions.BaseException;
 import tecnico.sec.proto.exceptions.NonceExceptions;
 
-import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
-
-import static java.util.stream.Collectors.counting;
-import static java.util.stream.Collectors.groupingBy;
 
 public class ServiceImpl extends ServiceImplBase {
 
     @Override
-    public void getNonce(NonceRequest request, StreamObserver<NonceResponse> responseObserver) {
+    public void getChallenge(ChallengeRequest request, StreamObserver<ChallengeResponse> responseObserver) {
         byte[] publicKey = request.getPublicKey().toByteArray();
 
         try {
-            int nonce = Nonce.getNonce(publicKey);
-            tecnico.sec.grpc.Nonce nonceField = tecnico.sec.grpc.Nonce.newBuilder().setNonce(nonce).build();
-            responseObserver.onNext(NonceResponse.newBuilder().setNonce(nonceField).build());
+            Challenge challenge = Nonce.getNonce(publicKey);
+            responseObserver.onNext(ChallengeResponse.newBuilder().setChallenge(challenge).build());
             responseObserver.onCompleted();
         } catch (NonceExceptions.NonceNotFoundException | BalanceExceptions.GeneralMYSQLException e) {
-            SecureRandom random = new SecureRandom();
-            int nonce = random.nextInt();
-            tecnico.sec.grpc.Nonce nonceField = tecnico.sec.grpc.Nonce.newBuilder().setNonce(nonce).build();
             try {
-                Nonce.createNonce(publicKey , nonce);
-                responseObserver.onNext(NonceResponse.newBuilder().setNonce(nonceField).build());
+                SecureRandom random = new SecureRandom();
+                long nonce = random.nextLong();
+                Nonce.createNonce(publicKey , nonce , (int) Math.round( Math.random() ));
+                Challenge challenge = Nonce.getNonce(publicKey);
+                responseObserver.onNext(ChallengeResponse.newBuilder().setChallenge(challenge).build());
                 responseObserver.onCompleted();
             } catch (BaseException ex) {
                 try {
-                    //responseObserver.onError(ex);
                     String errorMessage = ex.getMessage();
                     byte[] signedPublicKey = Sign.signMessage(publicKey,errorMessage);
                     Error error = Error.newBuilder().setMessage(ex.getMessage()).setSignature(ByteString.copyFrom(signedPublicKey)).build();
-                    responseObserver.onNext(NonceResponse.newBuilder().setError(error).build());
+                    responseObserver.onNext(ChallengeResponse.newBuilder().setError(error).build());
                     responseObserver.onCompleted();
                 } catch (BaseException ignored){
                 }
@@ -105,11 +98,18 @@ public class ServiceImpl extends ServiceImplBase {
         byte[] publicKeySource = request.getPublicKeySource().toByteArray();
         byte[] publicKeyDestination = request.getPublicKeyDestination().toByteArray();
         int amount = request.getAmount();
-        int nonce = request.getNonce();
+        long nonce = request.getNonce();
+        Challenge sentChallenge = null;
+        try {
+            sentChallenge = Nonce.getNonce(publicKeySource);
+        } catch (NonceExceptions.NonceNotFoundException | BalanceExceptions.GeneralMYSQLException e) {}
+        ChallengeCompleted solve = request.getChallenge();
         byte[] signature = request.getSignature().toByteArray();
 
         try {
-            Sign.checkSignature(publicKeySource, signature, publicKeySource , publicKeyDestination , amount , nonce);
+            assert(nonce == sentChallenge.getNonce() + 1);
+            Sign.checkSignature(publicKeySource , solve.getHash().toByteArray() , nonce , solve.getPadding());
+            Sign.checkSignature(publicKeySource, signature, publicKeySource , publicKeyDestination , amount , nonce , solve);
             Transactions.addTransaction(publicKeySource , publicKeyDestination , amount , nonce , signature);
             byte[] signedIncrementedNonce = Sign.signMessage(publicKeySource , publicKeyDestination , amount , nonce + 1);
             SendAmount sendAmount = SendAmount.newBuilder().setSignature(ByteString.copyFrom(signedIncrementedNonce)).build();

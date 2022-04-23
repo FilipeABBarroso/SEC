@@ -1,5 +1,8 @@
 package tecnico.sec.KeyStore.singletons;
 
+import com.google.protobuf.ByteString;
+import org.javatuples.Pair;
+import tecnico.sec.grpc.ChallengeCompleted;
 import tecnico.sec.proto.exceptions.IOExceptions;
 import tecnico.sec.proto.exceptions.KeyExceptions;
 import tecnico.sec.proto.exceptions.SignatureExceptions;
@@ -8,6 +11,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.security.*;
+import java.util.HexFormat;
 
 public class Sign {
 
@@ -46,6 +50,20 @@ public class Sign {
         } catch (KeyExceptions.NoSuchAlgorithmException e) {
             throw new KeyExceptions.NoSuchAlgorithmException();
         }
+    }
+
+    public static String toHex(byte[] sign){
+        return HexFormat.of().formatHex(sign);
+    }
+
+    public static ChallengeCompleted solveChallenge(int zeros , long nonce) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException, KeyExceptions.GeneralKeyStoreErrorException {
+        int padding = 0;
+        byte[] solve = signMessage(nonce + 1 , padding);
+        while (!toHex(solve).startsWith("0".repeat(zeros))){
+            padding++;
+            solve = signMessage(nonce + 1 , padding);
+        }
+        return ChallengeCompleted.newBuilder().setHash(ByteString.copyFrom(solve)).setPadding(padding).build();
     }
 }
 
