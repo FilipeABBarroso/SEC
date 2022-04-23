@@ -70,9 +70,9 @@ public class ServiceImpl extends ServiceImplBase {
         } catch (BaseException e) {
             try {
                 //responseObserver.onError(ex);
-                String errorMessage = e.getMessage();
+                String errorMessage = e.toString();
                 byte[] signedPublicKey = Sign.signMessage(publicKey,errorMessage);
-                Error error = Error.newBuilder().setMessage(e.getMessage()).setSignature(ByteString.copyFrom(signedPublicKey)).build();
+                Error error = Error.newBuilder().setMessage(errorMessage).setSignature(ByteString.copyFrom(signedPublicKey)).build();
                 responseObserver.onNext(OpenAccountResponse.newBuilder().setError(error).build());
                 responseObserver.onCompleted();
             } catch (BaseException ignored){
