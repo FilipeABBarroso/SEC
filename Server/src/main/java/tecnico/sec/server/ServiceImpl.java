@@ -3,6 +3,7 @@ import com.google.protobuf.ByteString;
 import dbController.Balance;
 import dbController.Nonce;
 import dbController.Transactions;
+import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import org.javatuples.Pair;
 import tecnico.sec.KeyStore.singletons.KeyStore;
@@ -69,8 +70,7 @@ public class ServiceImpl extends ServiceImplBase {
             responseObserver.onCompleted();
         } catch (BaseException e) {
             try {
-                //responseObserver.onError(ex);
-                String errorMessage = e.toString();
+                String errorMessage = e.toResponseException().getMessage();
                 byte[] signedPublicKey = Sign.signMessage(publicKey,errorMessage);
                 Error error = Error.newBuilder().setMessage(errorMessage).setSignature(ByteString.copyFrom(signedPublicKey)).build();
                 responseObserver.onNext(OpenAccountResponse.newBuilder().setError(error).build());

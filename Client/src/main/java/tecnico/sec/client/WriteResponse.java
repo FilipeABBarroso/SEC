@@ -36,7 +36,9 @@ public class WriteResponse {
 
     @Override
     public int hashCode() {
-        return Objects.hash(response, isError, message);
+        //TODO AQUI A RESPONSE N PODE SER PORQUE AS ASSINATURAS SÃO DIFERENTES ENTÃO A HASH VAI SER SEMPRE DIFERENTE PARA CONTEUDOS IGUAIS
+        //ACHO QUE UMA POSSIVEL SOLUÇÃO ERA NO PROTO FAZER UM ENCAPSULADOR PARA AS ASSINATURAS DO TIPO (MSG: (VALORES: CENAS) , ASSINATURA: BLABLA)
+        return Objects.hash(response.getClass() ,isError, message);
     }
 
     public static WriteResponse getResult(List<WriteResponse> responseList) {

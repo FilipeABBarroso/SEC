@@ -79,7 +79,7 @@ public class Client {
             latch.await();
             WriteResponse response = WriteResponse.getResult(replies);
             System.out.println(response.getMessage());
-            return response.isError();
+            return !response.isError();
         } catch (InterruptedException | BaseException e) {
             Status status = Status.fromThrowable(e);
             System.out.println("ERROR : " + status.getCode() + " : " + status.getDescription());

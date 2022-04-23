@@ -56,7 +56,6 @@ public class Balance {
 
             // return id;
         } catch (SQLException e) {
-            System.out.println(e);
             if (e.getSQLState().equals(Constants.DUPLICATED_KEY)) {
                 throw new BalanceExceptions.PublicKeyAlreadyExistException();
             } else {
