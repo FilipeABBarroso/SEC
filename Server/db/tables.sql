@@ -23,8 +23,9 @@ CREATE TABLE IF NOT EXISTS Transactions(
     status statusOptions NOT NULL,
     nonce integer,
     signature bytea,
-    senderTransactionId integer PRIMARY KEY,
-    receiverTransactionId integer PRIMARY KEY,
+    id serial PRIMARY KEY,
+    senderTransactionId integer,
+    receiverTransactionId integer,
     FOREIGN KEY (publicKeySender)
         REFERENCES Balance (publicKey),
     FOREIGN KEY (publicKeyReceiver)
@@ -39,10 +40,10 @@ CREATE FUNCTION add_transaction(bytea, bytea, int, statusOptions, int, bytea)
         BEGIN
             BEGIN
                 SELECT MAX(senderTransactionId) FROM Transactions INTO id_val;
-                id_val=id_val + 1;
+                id_val:=id_val + 1;
             EXCEPTION
                 WHEN NO_DATA_FOUND THEN
-                    id_val=1;
+                    id_val:=1;
             END;
             INSERT INTO Transactions (senderTransactionId, publicKeySender, publicKeyReceiver, amount, status, nonce, signature) VALUES (id_val, $1, $2, $3, $4, $5, $6);
             UPDATE Balance set lastTransactionId = id_val where publicKey=$2;
