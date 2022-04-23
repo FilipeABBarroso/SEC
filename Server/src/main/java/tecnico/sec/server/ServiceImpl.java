@@ -63,7 +63,9 @@ public class ServiceImpl extends ServiceImplBase {
 
         try {
             Sign.checkSignature(publicKey, signature, publicKey);
+            System.out.println(1);
             Balance.openAccount(publicKey);
+            System.out.println(2);
             byte[] signedPublicKey = Sign.signMessage(publicKey);
             OpenAccount openAccount = OpenAccount.newBuilder().setSignature(ByteString.copyFrom(signedPublicKey)).build();
             responseObserver.onNext(OpenAccountResponse.newBuilder().setOpenAccount(openAccount).build());

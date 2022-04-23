@@ -12,13 +12,19 @@ public class Transaction {
     int id;
 
     public Transaction(byte[] publicKeySender, byte[] getPublicKeyReceiver, int amount, int id) {
-        this.publicKeySender = publicKeySender;
+        byte[] dummyArray = {0};
+        if (publicKeySender == null) {
+            this.publicKeySender = dummyArray;
+        } else {
+            this.publicKeySender = publicKeySender;
+        }
         this.getPublicKeyReceiver = getPublicKeyReceiver;
         this.amount = amount;
         this.id = id;
     }
 
     public tecnico.sec.grpc.Transaction toTransactionGrpc() {
+
         return tecnico.sec.grpc.Transaction.newBuilder()
                 .setId(id)
                 .setAmount(amount)

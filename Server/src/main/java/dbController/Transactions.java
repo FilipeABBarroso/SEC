@@ -164,10 +164,8 @@ public class Transactions {
             PreparedStatements.getAllTransactionPS().setBytes(2, publicKey);
             ResultSet rs = PreparedStatements.getAllTransactionPS().executeQuery();
             while (rs.next()) {
-                Transaction t = new Transaction(rs.getBytes("publicKeyReceiver"), rs.getBytes("publicKeyReceiver"),
+                Transaction t = new Transaction(rs.getBytes("publicKeySender"), rs.getBytes("publicKeyReceiver"),
                         rs.getInt("amount"), rs.getInt("id"));
-                System.out.println("AAAAAAAAAAAAAAAAAAA");
-                System.out.println(rs.getBytes("publicKeySender"));
                 list.add(t.toTransactionGrpc());
             }
         } catch (SQLException e) {

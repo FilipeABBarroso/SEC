@@ -32,8 +32,14 @@ public class Balance {
 
             conn.setAutoCommit(false);
 
-            byte[] initialSender = {0};
-            PreparedStatements.getAddTransaction().setBytes(1, initialSender);
+            PreparedStatements.getOpenAccountPS().setBytes(1, publicKey);
+            PreparedStatements.getOpenAccountPS().setInt(2, initialBalance);
+            PreparedStatements.getOpenAccountPS().setInt(3, 0);
+            if (PreparedStatements.getOpenAccountPS().executeUpdate() == 0) {
+                throw new BalanceExceptions.GeneralMYSQLException();
+            }
+
+            PreparedStatements.getAddTransaction().setBytes(1, null);
             PreparedStatements.getAddTransaction().setBytes(2, publicKey);
             PreparedStatements.getAddTransaction().setInt(3, initialBalance);
             PreparedStatements.getAddTransaction().setString(4, "Completed");
@@ -41,13 +47,6 @@ public class Balance {
             PreparedStatements.getAddTransaction().setBytes(6, null);
             if(PreparedStatements.getAddTransaction().executeUpdate() == 0) {
                 throw new TransactionsExceptions.FailInsertTransactionException();
-            }
-
-            PreparedStatements.getOpenAccountPS().setBytes(1, publicKey);
-            PreparedStatements.getOpenAccountPS().setInt(2, initialBalance);
-            PreparedStatements.getOpenAccountPS().setInt(3, 0);
-            if (PreparedStatements.getOpenAccountPS().executeUpdate() == 0) {
-                throw new BalanceExceptions.GeneralMYSQLException();
             }
 
             /*CallableStatement cs = conn.prepareCall("{ ? = call add_transaction(?, ?, ?, ?::statusOptions, ?, ?) }");

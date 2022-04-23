@@ -79,6 +79,9 @@ public class KeyStore {
 
     public static String byteArrayToString(byte[] publicKey) {
         try {
+            if (publicKey == null) {
+                return "BFTB";
+            }
             PublicKey inPublicKey = toPublicKey(publicKey);
             return publicKeyToString(inPublicKey);
         } catch (KeyExceptions.InvalidPublicKeyException e) {
