@@ -3,10 +3,7 @@ import com.google.protobuf.ByteString;
 import dbController.Balance;
 import dbController.Nonce;
 import dbController.Transactions;
-import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
-import org.javatuples.Pair;
-import tecnico.sec.KeyStore.singletons.KeyStore;
 import tecnico.sec.KeyStore.singletons.Sign;
 import tecnico.sec.grpc.*;
 import tecnico.sec.grpc.Error;
@@ -38,9 +35,9 @@ public class ServiceImpl extends ServiceImplBase {
                 responseObserver.onCompleted();
             } catch (BaseException ex) {
                 try {
-                    String errorMessage = ex.getMessage();
+                    String errorMessage = ex.toResponseException().getMessage();
                     byte[] signedPublicKey = Sign.signMessage(publicKey,errorMessage);
-                    Error error = Error.newBuilder().setMessage(ex.getMessage()).setSignature(ByteString.copyFrom(signedPublicKey)).build();
+                    Error error = Error.newBuilder().setMessage(errorMessage).setSignature(ByteString.copyFrom(signedPublicKey)).build();
                     responseObserver.onNext(ChallengeResponse.newBuilder().setError(error).build());
                     responseObserver.onCompleted();
                 } catch (BaseException ignored){
@@ -119,7 +116,7 @@ public class ServiceImpl extends ServiceImplBase {
             try {
                 //responseObserver.onError(ex);
                 String errorMessage = e.toResponseException().getMessage();
-                byte[] signedPublicKey = Sign.signMessage(publicKeySource , publicKeyDestination , amount , nonce + 1,errorMessage);
+                byte[] signedPublicKey = Sign.signMessage(publicKeySource , publicKeyDestination , amount , nonce + 1 , errorMessage);
                 Error error = Error.newBuilder().setMessage(errorMessage).setSignature(ByteString.copyFrom(signedPublicKey)).build();
                 responseObserver.onNext(SendAmountResponse.newBuilder().setError(error).build());
                 responseObserver.onCompleted();

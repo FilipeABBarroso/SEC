@@ -113,11 +113,10 @@ public class Client {
                         try {
                             switch (response.getResponseCase()) {
                                 case CHALLENGE -> {
+                                    System.out.println(server.getPort());
                                     ChallengeCompleted result = Sign.solveChallenge(response.getChallenge().getZeros() , response.getChallenge().getNonce());
                                     long nonce = response.getChallenge().getNonce();
-
                                     byte[] signature = signMessage(sourceField, destinationField, amount, nonce + 1 , result);
-
                                     SendAmountRequest sendAmountRequest = SendAmountRequest.newBuilder()
                                             .setPublicKeySource(ByteString.copyFrom(sourceField))
                                             .setPublicKeyDestination(ByteString.copyFrom(destinationField))
@@ -133,14 +132,14 @@ public class Client {
                                             try {
                                                 switch (response.getResponseCase()) {
                                                     case SENDAMOUNT -> {
-                                                        sendAmountCheckResponse(server.getPublicKey().getEncoded(), response.getSendAmount().getSignature().toByteArray(), sourceField, destinationField, amount, nonce + 1);
+                                                        sendAmountCheckResponse(server.getPublicKey().getEncoded(), response.getSendAmount().getSignature().toByteArray(), sourceField, destinationField, amount, nonce + 2);
                                                         synchronized (replies) {
                                                             replies.add(new WriteResponse(response, false, ""));
                                                         }
                                                         latch.countDown();
                                                     }
                                                     case ERROR -> {
-                                                        checkSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),sourceField,destinationField,amount,nonce + 1,response.getError().getMessage());
+                                                        checkSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),sourceField,destinationField,amount,nonce + 2,response.getError().getMessage());
                                                         synchronized (replies) {
                                                             replies.add(new WriteResponse(response, true, response.getError().getMessage()));
                                                         }
@@ -149,7 +148,9 @@ public class Client {
                                                     case RESPONSE_NOT_SET -> {
                                                     }
                                                 }
-                                            } catch(BaseException ignored){}
+                                            } catch(BaseException ignored){
+                                                latch.countDown();
+                                            }
                                         }
 
                                         @Override

@@ -58,11 +58,11 @@ public class Sign {
 
     public static ChallengeCompleted solveChallenge(int zeros , long nonce) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException, KeyExceptions.GeneralKeyStoreErrorException {
         int padding = 0;
+        System.out.println(zeros);
         byte[] solve = signMessage(nonce + 1 , padding);
         while (!toHex(solve).startsWith("0".repeat(zeros))){
             padding++;
             solve = signMessage(nonce + 1 , padding);
-            System.out.println(toHex(solve));
         }
         return ChallengeCompleted.newBuilder().setHash(ByteString.copyFrom(solve)).setPadding(padding).build();
     }
