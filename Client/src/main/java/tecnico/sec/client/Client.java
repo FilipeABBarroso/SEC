@@ -38,7 +38,7 @@ public class Client {
                     .build();
 
             List<WriteResponse> replies = Collections.synchronizedList(new ArrayList<>());
-            CountDownLatch latch = new CountDownLatch(ServerConnection.getServerCount() / 2 + 1);
+            CountDownLatch latch = new CountDownLatch(ServerConnection.getConnection().size() / 2 + 1);
 
             for (ServerInfo server : ServerConnection.getConnection()) {
                 server.getStub().openAccount(request, new StreamObserver<OpenAccountResponse>() {
