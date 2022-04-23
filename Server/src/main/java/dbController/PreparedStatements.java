@@ -55,7 +55,7 @@ public class PreparedStatements {
         Connection conn = DBConnection.getConnection();
         if (getNonce == null){
             try {
-                String query = "SELECT nonce FROM NONCE WHERE publicKey=?;";
+                String query = "SELECT nonce, zeros FROM NONCE WHERE publicKey=?;";
                 getNonce = conn.prepareStatement(query);
             } catch (SQLException e) {
                 System.out.println(e);
@@ -69,7 +69,7 @@ public class PreparedStatements {
         Connection conn = DBConnection.getConnection();
         if (createNonce == null){
             try {
-                String query = "INSERT INTO NONCE (publicKey,nonce) " + "VALUES (?,?);";
+                String query = "INSERT INTO NONCE (publicKey,nonce,zeros) " + "VALUES (?,?,?);";
                 createNonce = conn.prepareStatement(query);
             } catch (SQLException e) {
                 System.out.println(e);

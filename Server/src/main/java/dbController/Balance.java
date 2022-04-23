@@ -43,7 +43,7 @@ public class Balance {
             PreparedStatements.getAddTransaction().setBytes(2, publicKey);
             PreparedStatements.getAddTransaction().setInt(3, initialBalance);
             PreparedStatements.getAddTransaction().setString(4, "Completed");
-            PreparedStatements.getAddTransaction().setInt(5, 0);
+            PreparedStatements.getAddTransaction().setLong(5, 0);
             PreparedStatements.getAddTransaction().setBytes(6, null);
             if(PreparedStatements.getAddTransaction().executeUpdate() == 0) {
                 throw new TransactionsExceptions.FailInsertTransactionException();
