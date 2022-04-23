@@ -32,6 +32,17 @@ public class Balance {
 
             conn.setAutoCommit(false);
 
+            byte[] initialSender = {0};
+            PreparedStatements.getAddTransaction().setBytes(1, initialSender);
+            PreparedStatements.getAddTransaction().setBytes(2, publicKey);
+            PreparedStatements.getAddTransaction().setInt(3, initialBalance);
+            PreparedStatements.getAddTransaction().setString(4, "Completed");
+            PreparedStatements.getAddTransaction().setInt(5, 0);
+            PreparedStatements.getAddTransaction().setBytes(6, null);
+            if(PreparedStatements.getAddTransaction().executeUpdate() == 0) {
+                throw new TransactionsExceptions.FailInsertTransactionException();
+            }
+
             PreparedStatements.getOpenAccountPS().setBytes(1, publicKey);
             PreparedStatements.getOpenAccountPS().setInt(2, initialBalance);
             PreparedStatements.getOpenAccountPS().setInt(3, 0);
@@ -39,9 +50,9 @@ public class Balance {
                 throw new BalanceExceptions.GeneralMYSQLException();
             }
 
-            CallableStatement cs = conn.prepareCall("{ ? = call add_transaction(?, ?, ?, ?::statusOptions, ?, ?) }");
+            /*CallableStatement cs = conn.prepareCall("{ ? = call add_transaction(?, ?, ?, ?::statusOptions, ?, ?) }");
             cs.registerOutParameter(1, Types.INTEGER);
-            cs.setBytes(2, null);
+            cs.setBytes(2, initialSender);
             cs.setBytes(3, publicKey);
             cs.setInt(4, initialBalance);
             cs.setString(5, "Completed");
@@ -50,12 +61,13 @@ public class Balance {
 
             cs.executeUpdate();
 
-            int id = cs.getInt(1);
+            int id = cs.getInt(1); */
 
             conn.commit();
 
             // return id;
         } catch (SQLException e) {
+            System.out.println(e);
             if (e.getSQLState().equals(Constants.DUPLICATED_KEY) || e.getSQLState().equals(Constants.DUPLICATED_DUPLICATED_KEY)) {
                 try {
                     conn.commit();
