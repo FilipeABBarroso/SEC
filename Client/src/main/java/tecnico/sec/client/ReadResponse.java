@@ -33,7 +33,7 @@ public class ReadResponse {
 
     @Override
     public int hashCode() {
-        return Objects.hash(response, isError, message, transactions);
+        return Objects.hash(response.getClass(), isError, message, transactions);
     }
 
     public static ReadResponse getResult(List<ReadResponse> responseList) {
