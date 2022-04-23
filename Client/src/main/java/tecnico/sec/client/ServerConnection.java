@@ -59,7 +59,7 @@ public class ServerConnection {
     private static void initConnection(){
         servers = new ArrayList<>();
         try {
-            File myObj = new File("serversInfo.txt");
+            File myObj = new File("GeneratedKeyStores/serversInfo.txt");
             Scanner myReader = new Scanner(myObj);
             while (myReader.hasNextLine()) {
                 String[] data = myReader.nextLine().split("-");
