@@ -54,8 +54,6 @@ public class ReadResponse {
             map.put(r, val == null ? 1 : val + 1);
         }
 
-        System.out.println(map);
-
         return Collections.max(map.entrySet(), Comparator.comparing(Map.Entry::getValue));
     }
 
