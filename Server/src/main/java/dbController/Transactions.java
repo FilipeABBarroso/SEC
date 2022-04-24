@@ -270,32 +270,32 @@ public class Transactions {
         }
     }
 
-    synchronized public static void addMissingTransactions(ArrayList<Transaction> transactions) throws BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.FailInsertTransactionException, TransactionsExceptions.SenderPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, TransactionsExceptions.TransactionPublicKeyReceiverDontMatchException, NonceExceptions.NonceNotFoundException, TransactionsExceptions.PublicKeyNotFoundException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, TransactionsExceptions.TransactionAlreadyAcceptedException, TransactionsExceptions.TransactionIDNotFoundException {
+    synchronized public static void addMissingTransactions(List<tecnico.sec.grpc.Transaction> transactions) throws BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.FailInsertTransactionException, TransactionsExceptions.SenderPublicKeyNotFoundException, BalanceExceptions.PublicKeyNotFoundException, TransactionsExceptions.TransactionPublicKeyReceiverDontMatchException, NonceExceptions.NonceNotFoundException, TransactionsExceptions.PublicKeyNotFoundException, TransactionsExceptions.ReceiverPublicKeyNotFoundException, TransactionsExceptions.TransactionAlreadyAcceptedException, TransactionsExceptions.TransactionIDNotFoundException {
         Connection conn = DBConnection.getConnection();
 
-        transactions.sort(Comparator.comparing(Transaction::getSenderTransactionId));
-        for (Transaction t: transactions) {
+        transactions.sort(Comparator.comparing(tecnico.sec.grpc.Transaction::getIdSender));
+        for (tecnico.sec.grpc.Transaction t: transactions) {
             try{
                 conn.setAutoCommit(false);
 
-                PreparedStatements.getTransactionPS().setInt(1, t.getSenderTransactionId());
+                PreparedStatements.getTransactionPS().setInt(1, t.getIdSender());
                 ResultSet transaction = PreparedStatements.getTransactionPS().executeQuery();
                 if (!transaction.next()) {
                     // add transaction
-                    PreparedStatements.getAddTransaction().setBytes(1, t.getPublicKeySender());
-                    PreparedStatements.getAddTransaction().setBytes(2, t.getPublicKeyReceiver());
+                    PreparedStatements.getAddTransaction().setBytes(1, t.getSender().toByteArray());
+                    PreparedStatements.getAddTransaction().setBytes(2, t.getReceiver().toByteArray());
                     PreparedStatements.getAddTransaction().setInt(3, t.getAmount());
-                    PreparedStatements.getAddTransaction().setString(4, t.getStatus());
+                    PreparedStatements.getAddTransaction().setString(4, t.getAccepted() ? "Completed" : "Pending");
                     PreparedStatements.getAddTransaction().setLong(5, t.getNonce());
-                    PreparedStatements.getAddTransaction().setBytes(6, t.getSignature());
-                    PreparedStatements.getAddTransaction().setInt(7, t.getReceiverTransactionId());
-                    PreparedStatements.getAddTransaction().setInt(8, t.getSenderTransactionId());
+                    PreparedStatements.getAddTransaction().setBytes(6, t.getSignature().toByteArray());
+                    PreparedStatements.getAddTransaction().setInt(7, t.getIdReceiver());
+                    PreparedStatements.getAddTransaction().setInt(8, t.getIdSender());
                     if(PreparedStatements.getAddTransaction().executeUpdate() == 0) {
                         throw new TransactionsExceptions.FailInsertTransactionException();
                     }
 
                     // update sender balance
-                    PreparedStatements.getBalancePS().setBytes(1, t.getPublicKeySender());
+                    PreparedStatements.getBalancePS().setBytes(1, t.getSender().toByteArray());
                     ResultSet senderBalanceRS = PreparedStatements.getBalancePS().executeQuery();
                     if (!senderBalanceRS.next()) {
                         throw new BalanceExceptions.PublicKeyNotFoundException();
@@ -303,15 +303,15 @@ public class Transactions {
                     int updatedSenderBalance = senderBalanceRS.getInt("balance") - t.getAmount();
                     int currentSenderId = senderBalanceRS.getInt("lastTransactionId");
                     PreparedStatements.getUpdateBalancePS().setInt(1, updatedSenderBalance);
-                    PreparedStatements.getUpdateBalancePS().setInt(2, currentSenderId > t.getSenderTransactionId() ? currentSenderId : t.getSenderTransactionId());
-                    PreparedStatements.getUpdateBalancePS().setBytes(3, t.getPublicKeySender());
+                    PreparedStatements.getUpdateBalancePS().setInt(2, currentSenderId > t.getIdSender() ? currentSenderId : t.getIdSender());
+                    PreparedStatements.getUpdateBalancePS().setBytes(3, t.getSender().toByteArray());
                     if (PreparedStatements.getUpdateBalancePS().executeUpdate() == 0) {
                         throw new TransactionsExceptions.SenderPublicKeyNotFoundException();
                     }
 
-                    if (t.getStatus().equals("Completed")) {
+                    if (t.getAccepted()) {
                         // update receiver balance
-                        PreparedStatements.getBalancePS().setBytes(1, t.getPublicKeySender());
+                        PreparedStatements.getBalancePS().setBytes(1, t.getSender().toByteArray());
                         ResultSet ReceiverBalanceRS = PreparedStatements.getBalancePS().executeQuery();
                         if (!ReceiverBalanceRS.next()) {
                             throw new BalanceExceptions.PublicKeyNotFoundException();
@@ -319,15 +319,15 @@ public class Transactions {
                         int updatedReceiverBalance = ReceiverBalanceRS.getInt("balance") + t.getAmount();
                         int currentReceiverId = ReceiverBalanceRS.getInt("lastTransactionId");
                         PreparedStatements.getUpdateBalancePS().setInt(1, updatedReceiverBalance);
-                        PreparedStatements.getUpdateBalancePS().setInt(2, currentReceiverId > t.getReceiverTransactionId() ? currentReceiverId : t.getReceiverTransactionId());
-                        PreparedStatements.getUpdateBalancePS().setBytes(3, t.getPublicKeySender());
+                        PreparedStatements.getUpdateBalancePS().setInt(2, currentReceiverId > t.getIdReceiver() ? currentReceiverId : t.getIdReceiver());
+                        PreparedStatements.getUpdateBalancePS().setBytes(3, t.getSender().toByteArray());
                         if (PreparedStatements.getUpdateBalancePS().executeUpdate() == 0) {
                             throw new TransactionsExceptions.SenderPublicKeyNotFoundException();
                         }
                     }
 
                 } else {
-                    changeMissingStatus(t.getSenderTransactionId(), t.getPublicKeyReceiver(), t.getReceiverTransactionId());
+                    changeMissingStatus(t.getIdSender(), t.getReceiver().toByteArray(), t.getIdReceiver());
                 }
 
                 conn.commit();
@@ -339,8 +339,8 @@ public class Transactions {
         };
     }
 
-    synchronized public static ArrayList<Transaction> getMissingTransactions(int senderTransactionId) throws BalanceExceptions.GeneralMYSQLException {
-        ArrayList<Transaction> list = new ArrayList<>();
+    synchronized public static ArrayList<tecnico.sec.grpc.Transaction> getMissingTransactions(int senderTransactionId) throws BalanceExceptions.GeneralMYSQLException {
+        ArrayList<tecnico.sec.grpc.Transaction> list = new ArrayList<>();
 
         try {
             PreparedStatements.getTransactionsPS().setInt(1, senderTransactionId);
@@ -350,7 +350,7 @@ public class Transactions {
                 Transaction t = new Transaction(rs.getBytes("publicKeySender"), rs.getBytes("publicKeyReceiver"),
                         rs.getInt("amount"), rs.getLong("nonce"), rs.getBytes("signature"),
                         rs.getString("status"), rs.getInt("senderTransactionId"), rs.getInt("receiverTransactionId"));
-                list.add(t);
+                list.add(t.toDetailedTransactionGrpc());
             }
         } catch (SQLException e) {
             System.out.println(e);

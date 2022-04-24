@@ -78,8 +78,21 @@ public class Transaction {
     public tecnico.sec.grpc.Transaction toTransactionGrpc() {
 
         return tecnico.sec.grpc.Transaction.newBuilder()
-                .setId(senderTransactionId)
+                .setIdSender(senderTransactionId)
                 .setAmount(amount)
+                .setSender(ByteString.copyFrom(publicKeySender))
+                .setReceiver(ByteString.copyFrom(publicKeyReceiver)).build();
+    }
+
+    public tecnico.sec.grpc.Transaction toDetailedTransactionGrpc() {
+
+        return tecnico.sec.grpc.Transaction.newBuilder()
+                .setAccepted(status == "Completed" ? true : false)
+                .setIdSender(senderTransactionId)
+                .setIdReceiver(receiverTransactionId)
+                .setAmount(amount)
+                .setSignature(ByteString.copyFrom(signature))
+                .setNonce(nonce)
                 .setSender(ByteString.copyFrom(publicKeySender))
                 .setReceiver(ByteString.copyFrom(publicKeyReceiver)).build();
     }

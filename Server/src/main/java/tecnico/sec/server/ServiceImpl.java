@@ -3,15 +3,21 @@ import com.google.protobuf.ByteString;
 import dbController.Balance;
 import dbController.Nonce;
 import dbController.Transactions;
+import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
+import tecnico.sec.KeyStore.singletons.KeyStore;
 import tecnico.sec.KeyStore.singletons.Sign;
+import tecnico.sec.client.ServerConnection;
+import tecnico.sec.client.WriteResponse;
 import tecnico.sec.grpc.*;
 import tecnico.sec.grpc.Error;
 import tecnico.sec.grpc.ServiceGrpc.ServiceImplBase;
 import tecnico.sec.proto.exceptions.*;
 
+import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 
 public class ServiceImpl extends ServiceImplBase {
 
@@ -51,15 +57,7 @@ public class ServiceImpl extends ServiceImplBase {
                 } catch (BaseException ignored){
                 }
             }
-        } catch (KeyExceptions.InvalidPublicKeyException e) {
-            e.printStackTrace();
-        } catch (SignatureExceptions.CanNotSignException e) {
-            e.printStackTrace();
-        } catch (IOExceptions.IOException e) {
-            e.printStackTrace();
-        } catch (KeyExceptions.NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (KeyExceptions.GeneralKeyStoreErrorException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -88,25 +86,60 @@ public class ServiceImpl extends ServiceImplBase {
         }
     }
 
-    /*
     @Override
     public void updateTransactions(UpdateTransactionsRequest request, StreamObserver<Ack> responseObserver) {
-        //todo update -- transactions mal assinadas(done) -- check signatures(done)
         responseObserver.onNext(Ack.newBuilder().build());
         responseObserver.onCompleted();
 
         try {
             List<Transaction> transactions = request.getTransactionsList();
-            for (int i = 0; i < request.getServersList().size(); i++) {
-                PublicKey serverPublicKey = KeyStore.stringToPublicKey(request.getServersList().get(i));
+            List<PublicKey> servers = new ArrayList<>();
+            for (int i = 0; i < request.getQuorum().getServerMessagesCount(); i++) {
+                PublicKey serverPublicKey = KeyStore.stringToPublicKey(request.getQuorum().getServerMessages(i).getPublicKey());
                 ServerInfo.serverPublicKeyExists(serverPublicKey);
-                Sign.checkSignature(serverPublicKey.getEncoded(),request.getSignaturesList().get(i).toByteArray(),transactions);
+                servers.add(serverPublicKey);
+                Sign.checkSignature(serverPublicKey.getEncoded(), request.getQuorum().getServerMessages(i).getSignature().toByteArray(), transactions);
             }
-            //todo update transactions
-        } catch(BaseException e){
-            System.out.println("Problems Updating");
-        }
-    }*/
+
+            List<WriteResponse> replies = Collections.synchronizedList(new ArrayList<>());
+            CountDownLatch latch = new CountDownLatch(ServerConnection.getConnection().size() / 2 + 1);
+            ServerUpdateRequest req = ServerUpdateRequest.newBuilder().setLatestID(Transactions.getLastTransactionId()).build();
+
+            for (Server server : ServerInfo.getServerList()) {
+                if (servers.contains(server.getPublicKey())) {
+                    server.getConnection().getMissingTransactions(req, new StreamObserver<ServerUpdateReply>() {
+                        @Override
+                        public void onNext(ServerUpdateReply response) {
+                            try {
+                                Sign.checkSignature(server.getPublicKey().getEncoded(), response.getSignature().toByteArray(), response.getTransactionsList());
+                                synchronized (replies) {
+                                    replies.add(new WriteResponse(response.getTransactionsList(), false, ""));
+                                }
+                                latch.countDown();
+
+                            } catch (BaseException ignored) {
+                            }
+                        }
+
+                        @Override
+                        public void onError(Throwable t) {
+                            System.out.println("Error occurred " + t.getMessage());
+                        }
+
+                        @Override
+                        public void onCompleted() {
+                        }
+                    });}
+                }
+
+                latch.await();
+                WriteResponse response = WriteResponse.getResult(replies);
+                Transactions.addMissingTransactions((List<Transaction>) response.getResponse());
+            } catch(InterruptedException | BaseException e){
+                Status status = Status.fromThrowable(e);
+                System.out.println("ERROR : " + status.getCode() + " : " + status.getDescription());
+            }
+    }
 
     @Override
     public void sendAmount(SendAmountRequest request, StreamObserver<SendAmountResponse> responseObserver) {
@@ -212,6 +245,16 @@ public class ServiceImpl extends ServiceImplBase {
                 responseObserver.onCompleted();
             } catch (BaseException ignored){
             }
+        }
+    }
+
+    @Override
+    public void getMissingTransactions(ServerUpdateRequest request , StreamObserver<ServerUpdateReply> responseObserver){
+        try {
+            List<Transaction> list =  Transactions.getMissingTransactions(request.getLatestID());
+            responseObserver.onNext(ServerUpdateReply.newBuilder().addAllTransactions(list).setSignature(ByteString.copyFrom(Sign.signMessage(list))).build());
+            responseObserver.onCompleted();
+        } catch (BalanceExceptions.GeneralMYSQLException | KeyExceptions.InvalidPublicKeyException | SignatureExceptions.CanNotSignException | IOExceptions.IOException | KeyExceptions.NoSuchAlgorithmException | KeyExceptions.GeneralKeyStoreErrorException e) {
         }
     }
 }

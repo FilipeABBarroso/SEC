@@ -131,11 +131,23 @@ message Server {
 }
 
 message Transaction {
-  int32 id = 1;
-  bytes sender = 2;
-  bytes receiver = 3;
-  int32 amount = 4;
-  bool accepted = 5;
+  int32 idSender = 1;
+  int32 idReceiver = 2;
+  bytes sender = 3;
+  bytes receiver = 4;
+  int32 amount = 5;
+  bool accepted = 6;
+  int64 nonce = 7;
+  bytes signature = 8;
+}
+
+message ServerUpdateRequest {
+  int32 latestID = 1;
+}
+
+message ServerUpdateReply{
+  repeated Transaction transactions = 1;
+  bytes signature = 2;
 }
 
 message Ack {
@@ -150,4 +162,5 @@ service Service {
   rpc updateCheckAccount(CheckAccountRequest) returns (CheckAccountResponse);
   rpc Audit(AuditRequest) returns (AuditResponse);
   rpc updateTransactions(UpdateTransactionsRequest) returns (Ack);
+  rpc GetMissingTransactions(ServerUpdateRequest) returns (ServerUpdateReply);
 }

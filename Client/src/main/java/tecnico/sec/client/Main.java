@@ -129,12 +129,12 @@ public class Main {
         }
         for(Transaction t : transactions) {
             if(t.getSender().size() == 1){
-                System.out.println("[" + t.getId() + "]" + " amount: " + t.getAmount() + "\nFrom: " +
+                System.out.println("[" + t.getIdSender() + "]" + " amount: " + t.getAmount() + "\nFrom: " +
                         "MINT" + "\nTo: " + KeyStore.byteArrayToString(t.getReceiver().toByteArray()) + "\n");
 
             }
             else {
-                System.out.println("[" + t.getId() + "]" + " amount: " + t.getAmount() + "\nFrom: " +
+                System.out.println("[" + t.getIdSender() + "]" + " amount: " + t.getAmount() + "\nFrom: " +
                         KeyStore.byteArrayToString(t.getSender().toByteArray()) + "\nTo: " + KeyStore.byteArrayToString(t.getReceiver().toByteArray()) + "\n");
 
             }
