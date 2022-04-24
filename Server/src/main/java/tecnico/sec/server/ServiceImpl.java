@@ -98,24 +98,30 @@ public class ServiceImpl extends ServiceImplBase {
                 PublicKey serverPublicKey = KeyStore.toPublicKey(request.getQuorum().getServerMessages(i).getPublicKey().toByteArray());
                 ServerInfo.serverPublicKeyExists(serverPublicKey);
                 servers.add(serverPublicKey);
-                Sign.checkSignature(serverPublicKey.getEncoded(), request.getQuorum().getServerMessages(i).getSignature().toByteArray(), transactions);
+                Sign.checkSignature(serverPublicKey.getEncoded(), request.getQuorum().getServerMessages(i).getSignature().toByteArray(), request.getTransactionsList().toArray());
             }
 
             List<WriteResponse> replies = Collections.synchronizedList(new ArrayList<>());
-            CountDownLatch latch = new CountDownLatch(ServerConnection.getConnection().size() / 2 + 1);
+            CountDownLatch latch = new CountDownLatch(ServerInfo.getServerList().size() / 2 + 1);
             ServerUpdateRequest req = ServerUpdateRequest.newBuilder().setLatestID(Transactions.getLastTransactionId()).build();
 
             for (Server server : ServerInfo.getServerList()) {
                 if (servers.contains(server.getPublicKey())) {
+                    System.out.println(1);
                     server.getConnection().getMissingTransactions(req, new StreamObserver<ServerUpdateReply>() {
                         @Override
                         public void onNext(ServerUpdateReply response) {
                             try {
+                                System.out.println(2);
                                 Sign.checkSignature(server.getPublicKey().getEncoded(), response.getSignature().toByteArray(), response.getTransactionsList());
+                                System.out.println(3);
                                 synchronized (replies) {
+                                    System.out.println(4);
                                     replies.add(new WriteResponse(response.getTransactionsList(), false, ""));
+                                    System.out.println(5);
                                 }
                                 latch.countDown();
+                                System.out.println(6);
 
                             } catch (BaseException ignored) {
                             }
@@ -123,7 +129,9 @@ public class ServiceImpl extends ServiceImplBase {
 
                         @Override
                         public void onError(Throwable t) {
+                            System.out.println(7);
                             System.out.println("Error occurred " + t.getMessage());
+                            System.out.println(8);
                         }
 
                         @Override
@@ -131,11 +139,15 @@ public class ServiceImpl extends ServiceImplBase {
                         }
                     });}
                 }
-
+            System.out.println(9);
                 latch.await();
+            System.out.println(10);
                 WriteResponse response = WriteResponse.getResult(replies);
+            System.out.println("Pre final");
                 Transactions.addMissingTransactions((List<Transaction>) response.getResponse());
+            System.out.println("Finaaaaaaaaaaal");
             } catch(InterruptedException | BaseException e){
+                System.out.println(e);
                 Status status = Status.fromThrowable(e);
                 System.out.println("ERROR : " + status.getCode() + " : " + status.getDescription());
             }

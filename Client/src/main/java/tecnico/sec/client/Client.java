@@ -323,6 +323,7 @@ public class Client {
             byte[] pubKeyField = pubKey.getEncoded();
 
             List<ReadResponse> replies = Collections.synchronizedList(new ArrayList<>());
+            int quorum = ServerConnection.getConnection().size() / 2 + 1;
             CountDownLatch latch = new CountDownLatch(ServerConnection.getConnection().size());
 
             for (ServerInfo server : ServerConnection.getConnection()) {
@@ -351,6 +352,7 @@ public class Client {
                             try {
                                 switch (response.getResponseCase()) {
                                     case CHECKACCOUNT -> {
+                                        System.out.println("signature: " + response.getCheckAccount().getSignature().toByteArray());
                                         checkAccountCheckResponse(server.getPublicKey().getEncoded(), response.getCheckAccount().getSignature().toByteArray(), response.getCheckAccount().getBalance(), response.getCheckAccount().getTransactionsList().toArray());
                                         synchronized (replies) {
                                             replies.add(new ReadResponse(server, response, false, "", response.getCheckAccount().getTransactionsList(),response.getCheckAccount().getBalance()));
@@ -385,6 +387,7 @@ public class Client {
 
                         @Override
                         public void onError(Throwable t) {
+                            latch.countDown();
                             System.out.println("Error occurred " + t.getMessage());
                         }
 
@@ -393,7 +396,7 @@ public class Client {
                         }
                     });
             }
-            if(latch.await(15, TimeUnit.SECONDS)) { //waits for 15 seconds for a quorum result
+            if(latch.await(15, TimeUnit.SECONDS) || ReadResponse.quorumExists(replies, quorum)) { //waits for 15 seconds for a quorum result
                 ReadResponse response = ReadResponse.getResult(replies);
                 System.out.println(response.getMessage());
                 if (!response.isError()) {
@@ -419,6 +422,7 @@ public class Client {
             byte[] pubKeyField = key.getEncoded();
 
             List<ReadResponse> replies = Collections.synchronizedList(new ArrayList<>());
+            int quorum = ServerConnection.getConnection().size() / 2 + 1;
             CountDownLatch latch = new CountDownLatch(ServerConnection.getConnection().size());
 
             for (ServerInfo server : ServerConnection.getConnection()) {
@@ -489,15 +493,17 @@ public class Client {
 
                     @Override
                     public void onError(Throwable t) {
+                        latch.countDown();
                         System.out.println("Error occurred " + t.getMessage());
                     }
+
 
                     @Override
                     public void onCompleted() {
                     }
                 });
             }
-            if(latch.await(15, TimeUnit.SECONDS)) { //waits for 15 seconds for a quorum result
+            if(latch.await(15, TimeUnit.SECONDS) || ReadResponse.quorumExists(replies, quorum)) { //waits for 15 seconds for a quorum result
                 ReadResponse response = ReadResponse.getResult(replies);
                 System.out.println(response.getMessage());
                 if (!response.isError()) {
@@ -533,7 +539,22 @@ public class Client {
         UpdateTransactionsRequest request = UpdateTransactionsRequest.newBuilder().addAllTransactions(result.getTransactions()).setQuorum(Quorum.newBuilder().addAllServerMessages(servers).build()).build();
         for (ReadResponse r : responses) {
             if(!r.equals(result)){
-                r.getServer().getStub().updateTransactions(request,null);
+                r.getServer().getStub().updateTransactions(request, new StreamObserver<Ack>() {
+                    @Override
+                    public void onNext(Ack ack) {
+
+                    }
+
+                    @Override
+                    public void onError(Throwable throwable) {
+
+                    }
+
+                    @Override
+                    public void onCompleted() {
+
+                    }
+                });
             }
         }
     }

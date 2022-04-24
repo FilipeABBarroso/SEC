@@ -50,6 +50,7 @@ public class ServerInfo {
     }
 
     public static void serverPublicKeyExists(PublicKey publicKey) throws KeyExceptions.InvalidPublicKeyException {
+        getServerList();
         for(Server s : serverList){
             if(publicKey.equals(s.getPublicKey())){
                 return;
