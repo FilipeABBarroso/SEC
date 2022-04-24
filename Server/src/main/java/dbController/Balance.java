@@ -45,22 +45,11 @@ public class Balance {
             PreparedStatements.getAddTransaction().setString(4, "Completed");
             PreparedStatements.getAddTransaction().setLong(5, 0);
             PreparedStatements.getAddTransaction().setBytes(6, null);
+            PreparedStatements.getAddTransaction().setInt(7, 0);
+            PreparedStatements.getAddTransaction().setInt(8, 0);
             if(PreparedStatements.getAddTransaction().executeUpdate() == 0) {
                 throw new TransactionsExceptions.FailInsertTransactionException();
             }
-
-            /*CallableStatement cs = conn.prepareCall("{ ? = call add_transaction(?, ?, ?, ?::statusOptions, ?, ?) }");
-            cs.registerOutParameter(1, Types.INTEGER);
-            cs.setBytes(2, initialSender);
-            cs.setBytes(3, publicKey);
-            cs.setInt(4, initialBalance);
-            cs.setString(5, "Completed");
-            cs.setInt(6, 0);
-            cs.setBytes(7, null);
-
-            cs.executeUpdate();
-
-            int id = cs.getInt(1); */
 
             conn.commit();
 

@@ -7,34 +7,86 @@ import java.util.Arrays;
 
 public class Transaction {
     byte[] publicKeySender;
-    byte[] getPublicKeyReceiver;
     int amount;
-    int id;
+    byte[] publicKeyReceiver;
+    long nonce;
+    byte[] signature;
+    String status;
+    int senderTransactionId;
+    int receiverTransactionId;
 
-    public Transaction(byte[] publicKeySender, byte[] getPublicKeyReceiver, int amount, int id) {
+    public Transaction(byte[] publicKeySender, byte[] publicKeyReceiver, int amount, int senderTransactionId) {
         byte[] dummyArray = {0};
         if (publicKeySender == null) {
             this.publicKeySender = dummyArray;
         } else {
             this.publicKeySender = publicKeySender;
         }
-        this.getPublicKeyReceiver = getPublicKeyReceiver;
+        this.publicKeyReceiver = publicKeyReceiver;
         this.amount = amount;
-        this.id = id;
+        this.senderTransactionId = senderTransactionId;
+    }
+
+    public Transaction(byte[] publicKeySender, byte[] publicKeyReceiver, int amount, long nonce, byte[] signature, String status, int senderTransactionId, int receiverTransactionId) {
+        byte[] dummyArray = {0};
+        if (publicKeySender == null) {
+            this.publicKeySender = dummyArray;
+        } else {
+            this.publicKeySender = publicKeySender;
+        }
+        this.publicKeyReceiver = publicKeyReceiver;
+        this.amount = amount;
+        this.senderTransactionId = senderTransactionId;
+        this.nonce = nonce;
+        this.signature = signature;
+        this.status = status;
+        this.receiverTransactionId = receiverTransactionId;
+    }
+
+    public byte[] getPublicKeySender() {
+        return publicKeySender;
+    }
+
+    public int getAmount() {
+        return amount;
+    }
+
+    public byte[] getPublicKeyReceiver() {
+        return publicKeyReceiver;
+    }
+
+    public long getNonce() {
+        return nonce;
+    }
+
+    public byte[] getSignature() {
+        return signature;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public int getSenderTransactionId() {
+        return senderTransactionId;
+    }
+
+    public int getReceiverTransactionId() {
+        return receiverTransactionId;
     }
 
     public tecnico.sec.grpc.Transaction toTransactionGrpc() {
 
         return tecnico.sec.grpc.Transaction.newBuilder()
-                .setId(id)
+                .setId(senderTransactionId)
                 .setAmount(amount)
                 .setSender(ByteString.copyFrom(publicKeySender))
-                .setReceiver(ByteString.copyFrom(getPublicKeyReceiver)).build();
+                .setReceiver(ByteString.copyFrom(publicKeyReceiver)).build();
     }
 
     @Override
     public String toString() {
-        return "[" + id + "]" + " amount: " + amount + "\nFrom: " +
-                KeyStore.byteArrayToString(publicKeySender) + "\nTo: " + KeyStore.byteArrayToString(getPublicKeyReceiver) + "\n";
+        return "[" + senderTransactionId + "]" + " amount: " + amount + "\nFrom: " +
+                KeyStore.byteArrayToString(publicKeySender) + "\nTo: " + KeyStore.byteArrayToString(publicKeyReceiver) + "\n";
     }
 }

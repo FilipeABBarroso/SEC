@@ -18,10 +18,15 @@ public class PreparedStatements {
     private static PreparedStatement removeNonce;
     private static PreparedStatement updateTransaction;
     private static PreparedStatement receiverPKAndAmount;
-    private static PreparedStatement getTransaction;
+    private static PreparedStatement getPendingTransaction;
     private static PreparedStatement getAllTransaction;
+    private static PreparedStatement getTransaction;
+    private static PreparedStatement transactionStamps;
+    private static PreparedStatement updateReceiverTransaction;
+    private static PreparedStatement updateSenderTransaction;
 
     private static PreparedStatement getFirstTransactionId;
+    private static PreparedStatement getTransactions;
 
     public static PreparedStatement getBalancePS() throws BalanceExceptions.GeneralMYSQLException {
         Connection conn = DBConnection.getConnection();
@@ -83,7 +88,7 @@ public class PreparedStatements {
         Connection conn = DBConnection.getConnection();
         if (addTransaction == null){
             try {
-                String query = "INSERT INTO Transactions (publicKeySender, publicKeyReceiver, amount, status, nonce, signature) " + "VALUES (?,?,?,?::statusOptions,?,?);";
+                String query = "INSERT INTO Transactions (publicKeySender, publicKeyReceiver, amount, status, nonce, signature, receiverTransactionId, senderTransactionId) " + "VALUES (?,?,?,?::statusOptions,?,?,?,?);";
                 addTransaction = conn.prepareStatement(query);
             } catch (SQLException e) {
                 System.out.println(e);
@@ -111,7 +116,7 @@ public class PreparedStatements {
         Connection conn = DBConnection.getConnection();
         if (updateBalance == null){
             try {
-                String query = "UPDATE BALANCE set balance = ? where publicKey=?;";
+                String query = "UPDATE BALANCE set balance = ?, lastTransactionId = ? where publicKey=?;";
                 updateBalance = conn.prepareStatement(query);
             } catch (SQLException e) {
                 System.out.println(e);
@@ -139,7 +144,7 @@ public class PreparedStatements {
         Connection conn = DBConnection.getConnection();
         if (updateTransaction == null){
             try {
-                String query = "UPDATE TRANSACTIONS set status = ?::statusOptions where id=?;";
+                String query = "UPDATE TRANSACTIONS set status = ?::statusOptions, receiverTransactionId = ? where senderTransactionId=?;";
                 updateTransaction = conn.prepareStatement(query);
             } catch (SQLException e) {
                 System.out.println(e);
@@ -149,11 +154,39 @@ public class PreparedStatements {
         return updateTransaction;
     }
 
+    public static PreparedStatement getUpdateReceiverTransactionIdPS() throws BalanceExceptions.GeneralMYSQLException {
+        Connection conn = DBConnection.getConnection();
+        if (updateReceiverTransaction == null){
+            try {
+                String query = "UPDATE TRANSACTIONS set receiverTransactionId = ? where id=?;";
+                updateReceiverTransaction = conn.prepareStatement(query);
+            } catch (SQLException e) {
+                System.out.println(e);
+                throw new BalanceExceptions.GeneralMYSQLException();
+            }
+        }
+        return updateReceiverTransaction;
+    }
+
+    public static PreparedStatement getUpdateSenderTransactionIdPS() throws BalanceExceptions.GeneralMYSQLException {
+        Connection conn = DBConnection.getConnection();
+        if (updateSenderTransaction == null){
+            try {
+                String query = "UPDATE TRANSACTIONS set senderTransactionId = ? where senderTransactionId=?;";
+                updateSenderTransaction = conn.prepareStatement(query);
+            } catch (SQLException e) {
+                System.out.println(e);
+                throw new BalanceExceptions.GeneralMYSQLException();
+            }
+        }
+        return updateSenderTransaction;
+    }
+
     public static PreparedStatement getReceiverPKAndAmountPS() throws BalanceExceptions.GeneralMYSQLException {
         Connection conn = DBConnection.getConnection();
         if (receiverPKAndAmount == null){
             try {
-                String query = "SELECT publicKeyReceiver, amount, status FROM TRANSACTIONS WHERE id=?;";
+                String query = "SELECT publicKeyReceiver, amount, status FROM TRANSACTIONS WHERE senderTransactionId=?;";
                 receiverPKAndAmount = conn.prepareStatement(query);
             } catch (SQLException e) {
                 System.out.println(e);
@@ -163,11 +196,25 @@ public class PreparedStatements {
         return receiverPKAndAmount;
     }
 
+    public static PreparedStatement getPendingTransactionPS() throws BalanceExceptions.GeneralMYSQLException {
+        Connection conn = DBConnection.getConnection();
+        if (getPendingTransaction == null){
+            try {
+                String query = "SELECT publicKeySender, publicKeyReceiver, amount, id FROM TRANSACTIONS WHERE publicKeyReceiver=? AND status=?::statusOptions;";
+                getPendingTransaction = conn.prepareStatement(query);
+            } catch (SQLException e) {
+                System.out.println(e);
+                throw new BalanceExceptions.GeneralMYSQLException();
+            }
+        }
+        return getPendingTransaction;
+    }
+
     public static PreparedStatement getTransactionPS() throws BalanceExceptions.GeneralMYSQLException {
         Connection conn = DBConnection.getConnection();
         if (getTransaction == null){
             try {
-                String query = "SELECT publicKeySender, publicKeyReceiver, amount, id FROM TRANSACTIONS WHERE publicKeyReceiver=? AND status=?::statusOptions;";
+                String query = "SELECT id FROM TRANSACTIONS WHERE senderTransactionId = ?;";
                 getTransaction = conn.prepareStatement(query);
             } catch (SQLException e) {
                 System.out.println(e);
@@ -203,5 +250,33 @@ public class PreparedStatements {
             }
         }
         return getFirstTransactionId;
+    }
+
+    public static PreparedStatement getTransactionStampsIdPS() throws BalanceExceptions.GeneralMYSQLException {
+        Connection conn = DBConnection.getConnection();
+        if (transactionStamps == null){
+            try {
+                String query = "SELECT MAX(senderTransactionId), MAX(senderTransactionId) FROM Transactions";
+                transactionStamps = conn.prepareStatement(query);
+            } catch (SQLException e) {
+                System.out.println(e);
+                throw new BalanceExceptions.GeneralMYSQLException();
+            }
+        }
+        return transactionStamps;
+    }
+
+    public static PreparedStatement getTransactionsPS() throws BalanceExceptions.GeneralMYSQLException {
+        Connection conn = DBConnection.getConnection();
+        if (getTransactions == null){
+            try {
+                String query = "SELECT * FROM Transactions WHERE senderTransactionId > ? OR receiverTransactionId > ?";
+                getTransactions = conn.prepareStatement(query);
+            } catch (SQLException e) {
+                System.out.println(e);
+                throw new BalanceExceptions.GeneralMYSQLException();
+            }
+        }
+        return getTransactions;
     }
 }
