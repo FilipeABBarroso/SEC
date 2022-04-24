@@ -518,11 +518,22 @@ public class Client {
         checkSignature(serverPublicKey, signature, transactionList);
     }
 
-    public static void updateServers(List<ReadResponse> responses, ReadResponse result) {
+    public static void updateServers(List<ReadResponse> responses, ReadResponse result){
         List<ReadResponse> responsesQuorum = ReadResponse.getResponseQuorum(responses, result);
+        List<Server> servers = new ArrayList<>();
+        for(ReadResponse r : responsesQuorum){
+            if(r.getResponse().getClass() == CheckAccountResponse.class){
+                servers.add(Server.newBuilder().setSignature(((CheckAccountResponse) r.getResponse()).getCheckAccount().getSignature()).setPublicKey(ByteString.copyFrom(r.getServer().getPublicKey().getEncoded())).build());
+            }
+            if(r.getResponse().getClass() == AuditResponse.class){
+                servers.add(Server.newBuilder().setSignature(((AuditResponse) r.getResponse()).getAudit().getSignature()).setPublicKey(ByteString.copyFrom(r.getServer().getPublicKey().getEncoded())).build());
+            }
+        }
+
+        UpdateTransactionsRequest request = UpdateTransactionsRequest.newBuilder().addAllTransactions(result.getTransactions()).setQuorum(Quorum.newBuilder().addAllServerMessages(servers).build()).build();
         for (ReadResponse r : responses) {
             if(!r.equals(result)){
-                //todo call endpoint
+                r.getServer().getStub().updateTransactions(request,null);
             }
         }
     }

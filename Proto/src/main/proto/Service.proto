@@ -117,8 +117,6 @@ message Audit {
 message UpdateTransactionsRequest {
   repeated Transaction transactions = 1;
   Quorum quorum = 2;
-  int64 nonce = 3;
-  ChallengeCompleted challenge = 4;
 }
 
 message Quorum {
@@ -126,7 +124,7 @@ message Quorum {
 }
 
 message Server {
-  string publicKey = 1;
+  bytes publicKey = 1;
   bytes signature = 2;
 }
 

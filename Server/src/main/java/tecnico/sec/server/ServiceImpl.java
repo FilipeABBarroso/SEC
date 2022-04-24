@@ -95,7 +95,7 @@ public class ServiceImpl extends ServiceImplBase {
             List<Transaction> transactions = request.getTransactionsList();
             List<PublicKey> servers = new ArrayList<>();
             for (int i = 0; i < request.getQuorum().getServerMessagesCount(); i++) {
-                PublicKey serverPublicKey = KeyStore.stringToPublicKey(request.getQuorum().getServerMessages(i).getPublicKey());
+                PublicKey serverPublicKey = KeyStore.toPublicKey(request.getQuorum().getServerMessages(i).getPublicKey().toByteArray());
                 ServerInfo.serverPublicKeyExists(serverPublicKey);
                 servers.add(serverPublicKey);
                 Sign.checkSignature(serverPublicKey.getEncoded(), request.getQuorum().getServerMessages(i).getSignature().toByteArray(), transactions);
