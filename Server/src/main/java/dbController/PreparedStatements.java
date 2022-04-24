@@ -256,7 +256,7 @@ public class PreparedStatements {
         Connection conn = DBConnection.getConnection();
         if (transactionStamps == null){
             try {
-                String query = "SELECT MAX(senderTransactionId), MAX(senderTransactionId) FROM Transactions";
+                String query = "SELECT MAX(senderTransactionId), MAX(receiverTransactionId) FROM Transactions ;";
                 transactionStamps = conn.prepareStatement(query);
             } catch (SQLException e) {
                 System.out.println(e);
@@ -270,7 +270,7 @@ public class PreparedStatements {
         Connection conn = DBConnection.getConnection();
         if (getTransactions == null){
             try {
-                String query = "SELECT * FROM Transactions WHERE senderTransactionId > ? OR receiverTransactionId > ?";
+                String query = "SELECT * FROM Transactions WHERE senderTransactionId > ? OR receiverTransactionId > ? ;";
                 getTransactions = conn.prepareStatement(query);
             } catch (SQLException e) {
                 System.out.println(e);

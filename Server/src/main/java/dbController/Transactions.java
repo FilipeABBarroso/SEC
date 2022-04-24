@@ -67,6 +67,11 @@ public class Transactions {
 
             conn.commit();
         } catch (SQLException e) {
+            try {
+                conn.commit();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
             System.out.println(e);
             if (e.getSQLState().equals(Constants.FOREIGN_KEY_DONT_EXISTS)) {
                 if (e.getMessage().contains("receiver")){
@@ -133,11 +138,6 @@ public class Transactions {
 
     synchronized public static List<tecnico.sec.grpc.Transaction> getPendingTransactions(byte[] publicKey) throws TransactionsExceptions.ReceiverPublicKeyNotFoundException, BalanceExceptions.GeneralMYSQLException, TransactionsExceptions.PublicKeyNotFoundException {
         List<tecnico.sec.grpc.Transaction> list = new ArrayList<>();
-        try {
-            Balance.getBalance(publicKey);
-        }catch (BalanceExceptions.PublicKeyNotFoundException e ){
-            throw new TransactionsExceptions.PublicKeyNotFoundException();
-        }
 
         try {
             PreparedStatements.getPendingTransactionPS().setBytes(1, publicKey);
@@ -256,8 +256,8 @@ public class Transactions {
             if (!rs.next()) {
                 max = 1;
             } else {
-                max = rs.getInt("senderTransactionId");
-                int receiverTransactionId = rs.getInt("receiverTransactionId");
+                max = rs.getInt(1);
+                int receiverTransactionId = rs.getInt(2);
                 if (max < receiverTransactionId) {
                     max = receiverTransactionId;
                 }

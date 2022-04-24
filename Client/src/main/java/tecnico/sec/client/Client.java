@@ -281,6 +281,7 @@ public class Client {
                         try {
                             switch (response.getResponseCase()) {
                                 case CHECKACCOUNT -> {
+                                    System.out.println(1);
                                     checkAccountCheckResponse(server.getPublicKey().getEncoded(), response.getCheckAccount().getSignature().toByteArray(), response.getCheckAccount().getBalance(), response.getCheckAccount().getTransactionsList().toArray());
                                     synchronized (replies) {
                                         replies.add(new ReadResponse(server, response, false, "", response.getCheckAccount().getTransactionsList(),response.getCheckAccount().getBalance()));
@@ -288,6 +289,7 @@ public class Client {
                                     latch.countDown();
                                 }
                                 case ERROR -> {
+                                    System.out.println(2);
                                     errorCheckSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),pubKeyField,response.getError().getMessage());
                                     synchronized (replies) {
                                         replies.add(new ReadResponse(server, response, true, response.getError().getMessage(), new ArrayList<>(),0));
