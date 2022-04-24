@@ -104,8 +104,10 @@ public class ServiceImpl extends ServiceImplBase {
             List<WriteResponse> replies = Collections.synchronizedList(new ArrayList<>());
             CountDownLatch latch = new CountDownLatch(ServerInfo.getServerList().size() / 2 + 1);
             ServerUpdateRequest req = ServerUpdateRequest.newBuilder().setLatestID(Transactions.getLastTransactionId()).build();
+            System.out.println("req : " + req);
 
             for (Server server : ServerInfo.getServerList()) {
+                System.out.println("Server: " + server);
                 if (servers.contains(server.getPublicKey())) {
                     System.out.println(1);
                     server.getConnection().getMissingTransactions(req, new StreamObserver<ServerUpdateReply>() {
@@ -262,10 +264,15 @@ public class ServiceImpl extends ServiceImplBase {
 
     @Override
     public void getMissingTransactions(ServerUpdateRequest request , StreamObserver<ServerUpdateReply> responseObserver){
+        System.out.println("entou");
         try {
+            System.out.println("A");
             List<Transaction> list =  Transactions.getMissingTransactions(request.getLatestID());
+            System.out.println("B");
             responseObserver.onNext(ServerUpdateReply.newBuilder().addAllTransactions(list).setSignature(ByteString.copyFrom(Sign.signMessage(list))).build());
+            System.out.println("C");
             responseObserver.onCompleted();
+            System.out.println("D");
         } catch (BalanceExceptions.GeneralMYSQLException | KeyExceptions.InvalidPublicKeyException | SignatureExceptions.CanNotSignException | IOExceptions.IOException | KeyExceptions.NoSuchAlgorithmException | KeyExceptions.GeneralKeyStoreErrorException e) {
         }
     }

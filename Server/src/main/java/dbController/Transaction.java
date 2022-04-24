@@ -34,11 +34,15 @@ public class Transaction {
         } else {
             this.publicKeySender = publicKeySender;
         }
+        if (signature == null) {
+            this.signature = dummyArray;
+        } else {
+            this.signature = signature;
+        }
         this.publicKeyReceiver = publicKeyReceiver;
         this.amount = amount;
         this.senderTransactionId = senderTransactionId;
         this.nonce = nonce;
-        this.signature = signature;
         this.status = status;
         this.receiverTransactionId = receiverTransactionId;
     }

@@ -24,10 +24,12 @@ public class ServerInfo {
             try {
             Scanner myReader = new Scanner(myObj);
             List<Server> list = new ArrayList<Server>();
+            int counter= 0;
             while (myReader.hasNextLine()) {
                 String[] data = myReader.nextLine().split("-");
                     PublicKey publicKey = KeyStore.stringToPublicKey(data[1]);
-                    list.add(new Server(publicKey, initConnection("host.docker.internal" , Integer.parseInt(data[0]))));
+                    list.add(new Server(publicKey, initConnection("server" + counter, 8080)));
+                    counter++;
             }
             myReader.close();
             serverList = list;
