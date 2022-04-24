@@ -128,8 +128,16 @@ public class Main {
             return;
         }
         for(Transaction t : transactions) {
-            System.out.println("[" + t.getId() + "]" + " amount: " + t.getAmount() + "\nFrom: " +
-                    KeyStore.byteArrayToString(t.getSender().toByteArray()) + "\nTo: " + KeyStore.byteArrayToString(t.getReceiver().toByteArray()) + "\n");
+            if(t.getSender().size() == 1){
+                System.out.println("[" + t.getId() + "]" + " amount: " + t.getAmount() + "\nFrom: " +
+                        "MINT" + "\nTo: " + KeyStore.byteArrayToString(t.getReceiver().toByteArray()) + "\n");
+
+            }
+            else {
+                System.out.println("[" + t.getId() + "]" + " amount: " + t.getAmount() + "\nFrom: " +
+                        KeyStore.byteArrayToString(t.getSender().toByteArray()) + "\nTo: " + KeyStore.byteArrayToString(t.getReceiver().toByteArray()) + "\n");
+
+            }
         }
     }
 }

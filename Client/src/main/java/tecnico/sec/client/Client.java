@@ -101,23 +101,23 @@ public class Client {
             byte[] sourceField = source.getEncoded();
             byte[] destinationField = destination.getEncoded();
 
-            ChallengeRequest challengeRequest = ChallengeRequest.newBuilder().setPublicKey(ByteString.copyFrom(sourceField)).build();
-
             List<WriteResponse> replies = Collections.synchronizedList(new ArrayList<>());
             CountDownLatch latch = new CountDownLatch(ServerConnection.getServerCount() / 2 + 1);
 
             for (ServerInfo server : ServerConnection.getConnection()) {
+                SecureRandom random = new SecureRandom();
+                long clientNonce = random.nextLong();
+                ChallengeRequest challengeRequest = ChallengeRequest.newBuilder().setPublicKey(ByteString.copyFrom(sourceField)).setNonce(clientNonce).build();
                 server.getStub().getChallenge(challengeRequest,  new StreamObserver<ChallengeResponse>() {
                     @Override
                     public void onNext(ChallengeResponse response) {
                         try {
                             switch (response.getResponseCase()) {
                                 case CHALLENGE -> {
+                                    Sign.checkSignature(server.getPublicKey().getEncoded() , response.getSignature().toByteArray() , response.getChallenge().getNonce() , response.getChallenge().getZeros() , clientNonce + 1 );
                                     ChallengeCompleted result = Sign.solveChallenge(response.getChallenge().getZeros() , response.getChallenge().getNonce());
                                     long nonce = response.getChallenge().getNonce();
-
                                     byte[] signature = signMessage(sourceField, destinationField, amount, nonce + 1 , result);
-
                                     SendAmountRequest sendAmountRequest = SendAmountRequest.newBuilder()
                                             .setPublicKeySource(ByteString.copyFrom(sourceField))
                                             .setPublicKeyDestination(ByteString.copyFrom(destinationField))
@@ -126,21 +126,20 @@ public class Client {
                                             .setSignature(ByteString.copyFrom(signature))
                                             .setChallenge(result)
                                             .build();
-
                                     server.getStub().sendAmount(sendAmountRequest, new StreamObserver<SendAmountResponse>() {
                                         @Override
                                         public void onNext(SendAmountResponse response) {
                                             try {
                                                 switch (response.getResponseCase()) {
                                                     case SENDAMOUNT -> {
-                                                        sendAmountCheckResponse(server.getPublicKey().getEncoded(), response.getSendAmount().getSignature().toByteArray(), sourceField, destinationField, amount, nonce + 1);
+                                                        sendAmountCheckResponse(server.getPublicKey().getEncoded(), response.getSendAmount().getSignature().toByteArray(), sourceField, destinationField, amount, nonce + 2);
                                                         synchronized (replies) {
                                                             replies.add(new WriteResponse(response, false, ""));
                                                         }
                                                         latch.countDown();
                                                     }
                                                     case ERROR -> {
-                                                        checkSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),sourceField,destinationField,amount,nonce + 1,response.getError().getMessage());
+                                                        checkSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),sourceField,destinationField,amount,nonce + 2,response.getError().getMessage());
                                                         synchronized (replies) {
                                                             replies.add(new WriteResponse(response, true, response.getError().getMessage()));
                                                         }
@@ -149,7 +148,9 @@ public class Client {
                                                     case RESPONSE_NOT_SET -> {
                                                     }
                                                 }
-                                            } catch(BaseException ignored){}
+                                            } catch(BaseException ignored){
+                                                latch.countDown();
+                                            }
                                         }
 
                                         @Override
@@ -165,7 +166,8 @@ public class Client {
                                 case ERROR, RESPONSE_NOT_SET -> {
                                 }
                             }
-                        } catch(BaseException ignored){}
+                        } catch(BaseException ignored){
+                        }
                     }
 
                     @Override
