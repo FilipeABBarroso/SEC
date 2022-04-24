@@ -56,7 +56,7 @@ Run a client and leave it running. Remove the file called clientKeystore.ks and 
 
 Once you have two clients running you can test all the endpoints as you want, with invalid inputs with valid inputs.
 
-To test the atomic register algorithm you will need to go on the docker dashboard or get some docker server containers ids and shut them down (shut down a max of N/2 - 1) , then you will need to do some operations both writes and reads, then you turn the server back on and perform the operations as normal and verify that this does not compromise the veracity of the state of the system.
+To test the atomic register algorithm you will need to go on the docker dashboard or use for example ```docker stop server0``` to shut the server0 down (shut down a max of N/2 - 1 , that is the maximum number of faults that the system tolerate) , then you will need to do some operations both writes and reads, then you turn the server back on using the docker dashboard or ```docker start server0``` and perform the operations as normal and verify that this does not compromise the veracity of the state of the system.
 
 We also had tested some use cases besides the testes referred early:
 
