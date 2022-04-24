@@ -16,6 +16,7 @@ COPY --from=dependencies /app /app
 COPY KeyStore/src /app/KeyStore/src
 COPY Proto/src /app/Proto/src
 COPY Server/src /app/Server/src
+COPY Client/src /app/Client/src
 
 RUN mvn -B -e clean install
 
