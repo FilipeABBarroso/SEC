@@ -32,21 +32,14 @@ Compile source code
 ```
 mvn compile
 ```
-Compile Test source code
-```
-mvn compile-test
-```
 
 ## Usage
 
-Start Databases through Docker
+Start Databases and Servers through Docker using Bash
 ```
-docker-compose up
+./runServers.sh -r -b -n NUMBEROFSERVERINSTANCES
 ```
-Start Server
-```
-mvn compile exec:java -Dexec.mainClass="tecnico.sec.client.Main"
-```
+
 Start Client
 ```
 mvn compile exec:java -Dexec.mainClass="tecnico.sec.server.Main"
@@ -55,19 +48,17 @@ mvn compile exec:java -Dexec.mainClass="tecnico.sec.server.Main"
 ## Demo
 
 In order to demonstrate the mechanisms integrated in the project to tackle security and dependability threats,
-it is possible to run the tests.
+you will need to follow the following steps.
 
-In the client the tests were made to test the signature, this is to check
-the message integrity.
+Run the servers and wait for the DBs to get ready to receive connections.
 
-In the server the tests not only verify the message integrity, but also, for example, to check
-in the send_amount request the nonce sent by the client, and to test against attacks, such as, replay attacks.
-To test the endpoints we only create testes for one endpoint, because there are functions that are difficult to mock, such as, send_amount due to the existence of randomly generated nonces. So we tested the endpoint open_account for the porpouse of testing the signature operations and the GRPC mechanisms of retriving errors and responses and, in the parts that are diferent between the endpoints we tested it by creating unit tests for every function that we call except the signature ones that we explain early.
+Run a client and leave it running. Remove the file called clientKeystore.ks and run other client instance.
 
-To run te tests execute the following line:
-```
-mvn test
-```
+Once you have two clients running you can test all the endpoints as you want, with invalid inputs with valid inputs.
+
+To test the atomic register algorithm you will need to go on the docker dashboard or use for example ```docker stop server0``` to shut the server0 down (shut down a max of N/2 - 1 , that is the maximum number of faults that the system tolerate) , then you will need to do some operations both writes and reads, then you turn the server back on using the docker dashboard or ```docker start server0``` and perform the operations as normal and verify that this does not compromise the veracity of the state of the system.
+
+We also had tested some use cases besides the testes referred early:
 
 Client tests : 
 
@@ -117,6 +108,12 @@ Server tests :
 * getPendingTransactions
 * getPendingTransactionsNoTransactions
 * getPendingTransactionsNotCreatedUser
+
+Security:
+* Protection against replay attacks in both direction 
+* Protection against Spam attacks in almost every endpoint
+* Protection against N faults of the system preserving the correctness of the system
+* Protection against unauthorized operations
 
 ## Additional Information
 
