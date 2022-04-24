@@ -101,19 +101,20 @@ public class Client {
             byte[] sourceField = source.getEncoded();
             byte[] destinationField = destination.getEncoded();
 
-            ChallengeRequest challengeRequest = ChallengeRequest.newBuilder().setPublicKey(ByteString.copyFrom(sourceField)).build();
-
             List<WriteResponse> replies = Collections.synchronizedList(new ArrayList<>());
             CountDownLatch latch = new CountDownLatch(ServerConnection.getServerCount() / 2 + 1);
 
             for (ServerInfo server : ServerConnection.getConnection()) {
+                SecureRandom random = new SecureRandom();
+                long clientNonce = random.nextLong();
+                ChallengeRequest challengeRequest = ChallengeRequest.newBuilder().setPublicKey(ByteString.copyFrom(sourceField)).setNonce(clientNonce).build();
                 server.getStub().getChallenge(challengeRequest,  new StreamObserver<ChallengeResponse>() {
                     @Override
                     public void onNext(ChallengeResponse response) {
                         try {
                             switch (response.getResponseCase()) {
                                 case CHALLENGE -> {
-                                    System.out.println(server.getPort());
+                                    Sign.checkSignature(server.getPublicKey().getEncoded() , response.getSignature().toByteArray() , response.getChallenge().getNonce() , response.getChallenge().getZeros() , clientNonce + 1 );
                                     ChallengeCompleted result = Sign.solveChallenge(response.getChallenge().getZeros() , response.getChallenge().getNonce());
                                     long nonce = response.getChallenge().getNonce();
                                     byte[] signature = signMessage(sourceField, destinationField, amount, nonce + 1 , result);
@@ -125,7 +126,6 @@ public class Client {
                                             .setSignature(ByteString.copyFrom(signature))
                                             .setChallenge(result)
                                             .build();
-
                                     server.getStub().sendAmount(sendAmountRequest, new StreamObserver<SendAmountResponse>() {
                                         @Override
                                         public void onNext(SendAmountResponse response) {
@@ -166,7 +166,8 @@ public class Client {
                                 case ERROR, RESPONSE_NOT_SET -> {
                                 }
                             }
-                        } catch(BaseException ignored){}
+                        } catch(BaseException ignored){
+                        }
                     }
 
                     @Override

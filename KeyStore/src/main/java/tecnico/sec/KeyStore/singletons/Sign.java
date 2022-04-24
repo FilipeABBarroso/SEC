@@ -58,7 +58,6 @@ public class Sign {
 
     public static ChallengeCompleted solveChallenge(int zeros , long nonce) throws KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException, KeyExceptions.GeneralKeyStoreErrorException {
         int padding = 0;
-        System.out.println(zeros);
         byte[] solve = signMessage(nonce + 1 , padding);
         while (!toHex(solve).startsWith("0".repeat(zeros))){
             padding++;
