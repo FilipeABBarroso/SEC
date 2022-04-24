@@ -200,7 +200,7 @@ public class PreparedStatements {
         Connection conn = DBConnection.getConnection();
         if (getPendingTransaction == null){
             try {
-                String query = "SELECT publicKeySender, publicKeyReceiver, amount, id FROM TRANSACTIONS WHERE publicKeyReceiver=? AND status=?::statusOptions;";
+                String query = "SELECT publicKeySender, publicKeyReceiver, amount, id, senderTransactionId FROM TRANSACTIONS WHERE publicKeyReceiver=? AND status=?::statusOptions;";
                 getPendingTransaction = conn.prepareStatement(query);
             } catch (SQLException e) {
                 System.out.println(e);

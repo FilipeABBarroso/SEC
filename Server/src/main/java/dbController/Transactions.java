@@ -152,6 +152,7 @@ public class Transactions {
             System.out.println(e);
             throw new BalanceExceptions.GeneralMYSQLException();
         }
+        System.out.println("return das transactions");
         return list;
     }
 
