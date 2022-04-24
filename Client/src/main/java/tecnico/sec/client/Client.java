@@ -20,6 +20,7 @@ import static tecnico.sec.KeyStore.singletons.Sign.signMessage;
 import java.security.*;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 
 public class Client {
@@ -38,7 +39,8 @@ public class Client {
                     .build();
 
             List<WriteResponse> replies = Collections.synchronizedList(new ArrayList<>());
-            CountDownLatch latch = new CountDownLatch(ServerConnection.getConnection().size() / 2 + 1);
+            int quorum = ServerConnection.getConnection().size() / 2 + 1;
+            CountDownLatch latch = new CountDownLatch(1);
 
             for (ServerInfo server : ServerConnection.getConnection()) {
                 server.getStub().openAccount(request, new StreamObserver<OpenAccountResponse>() {
@@ -50,15 +52,19 @@ public class Client {
                                     openAccountCheckResponse(server.getPublicKey().getEncoded(), response.getOpenAccount().getSignature().toByteArray(), pubKeyField);
                                     synchronized (replies) {
                                         replies.add(new WriteResponse(response, false, ""));
+                                        if (WriteResponse.quorumExists(replies,quorum)) {
+                                            latch.countDown();
+                                        }
                                     }
-                                    latch.countDown();
                                 }
                                 case ERROR -> {
                                     errorCheckSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),pubKeyField,response.getError().getMessage());
                                     synchronized (replies) {
                                         replies.add(new WriteResponse(response, true, response.getError().getMessage()));
+                                        if (WriteResponse.quorumExists(replies,quorum)) {
+                                            latch.countDown();
+                                        }
                                     }
-                                    latch.countDown();
                                 }
                                 case RESPONSE_NOT_SET -> {
                                 }
@@ -76,10 +82,13 @@ public class Client {
                     }
                 });
             }
-            latch.await();
-            WriteResponse response = WriteResponse.getResult(replies);
-            System.out.println(response.getMessage());
-            return !response.isError();
+            if(latch.await(15, TimeUnit.SECONDS)) { //waits for 15 seconds for a quorum result
+                WriteResponse response = WriteResponse.getResult(replies);
+                System.out.println(response.getMessage());
+                return !response.isError();
+            } else { //result is not achieved
+                System.out.println("OPERATION UNAVAILABLE!");
+            }
         } catch (InterruptedException | BaseException e) {
             Status status = Status.fromThrowable(e);
             System.out.println("ERROR : " + status.getCode() + " : " + status.getDescription());
@@ -102,7 +111,8 @@ public class Client {
             byte[] destinationField = destination.getEncoded();
 
             List<WriteResponse> replies = Collections.synchronizedList(new ArrayList<>());
-            CountDownLatch latch = new CountDownLatch(ServerConnection.getServerCount() / 2 + 1);
+            int quorum = ServerConnection.getConnection().size() / 2 + 1;
+            CountDownLatch latch = new CountDownLatch(1);
 
             for (ServerInfo server : ServerConnection.getConnection()) {
                 SecureRandom random = new SecureRandom();
@@ -135,21 +145,25 @@ public class Client {
                                                         sendAmountCheckResponse(server.getPublicKey().getEncoded(), response.getSendAmount().getSignature().toByteArray(), sourceField, destinationField, amount, nonce + 2);
                                                         synchronized (replies) {
                                                             replies.add(new WriteResponse(response, false, ""));
+                                                            if (WriteResponse.quorumExists(replies,quorum)) {
+                                                                latch.countDown();
+                                                            }
                                                         }
-                                                        latch.countDown();
                                                     }
                                                     case ERROR -> {
                                                         checkSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),sourceField,destinationField,amount,nonce + 2,response.getError().getMessage());
                                                         synchronized (replies) {
                                                             replies.add(new WriteResponse(response, true, response.getError().getMessage()));
+                                                            if (WriteResponse.quorumExists(replies,quorum)) {
+                                                                latch.countDown();
+                                                            }
                                                         }
-                                                        latch.countDown();
                                                     }
                                                     case RESPONSE_NOT_SET -> {
                                                     }
                                                 }
                                             } catch(BaseException ignored){
-                                                latch.countDown();
+                                                latch.countDown(); //todo qué isto??
                                             }
                                         }
 
@@ -181,10 +195,13 @@ public class Client {
                 });
 
             }
-            latch.await();
-            WriteResponse response = WriteResponse.getResult(replies);
-            System.out.println(response.getMessage());
-            return !response.isError();
+            if(latch.await(15, TimeUnit.SECONDS)) { //waits for 15 seconds for a quorum result
+                WriteResponse response = WriteResponse.getResult(replies);
+                System.out.println(response.getMessage());
+                return !response.isError();
+            } else { //result is not achieved
+                System.out.println("OPERATION UNAVAILABLE!");
+            }
         } catch (BaseException | InterruptedException e) {
             Status status = Status.fromThrowable(e);
             System.out.println("ERROR : " + status.getCode() + " : " + status.getDescription());
@@ -203,7 +220,8 @@ public class Client {
             byte[] signature = signMessage(pubKeyField, transactionID);
 
             List<WriteResponse> replies = Collections.synchronizedList(new ArrayList<>());
-            CountDownLatch latch = new CountDownLatch(ServerConnection.getServerCount() / 2 + 1);
+            int quorum = ServerConnection.getConnection().size() / 2 + 1;
+            CountDownLatch latch = new CountDownLatch(1);
 
             for (ServerInfo server : ServerConnection.getConnection()) {
                 SecureRandom random = new SecureRandom();
@@ -236,15 +254,19 @@ public class Client {
                                                     receiveAmountCheckResponse(server.getPublicKey().getEncoded(), response.getReceiveAmount().getSignature().toByteArray(), pubKeyField, transactionID);
                                                     synchronized (replies) {
                                                         replies.add(new WriteResponse(response, false, ""));
+                                                        if (WriteResponse.quorumExists(replies,quorum)) {
+                                                            latch.countDown();
+                                                        }
                                                     }
-                                                    latch.countDown();
                                                 }
                                                 case ERROR -> {
                                                     checkSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(), pubKeyField, transactionID, response.getError().getMessage());
                                                     synchronized (replies) {
                                                         replies.add(new WriteResponse(response, true, response.getError().getMessage()));
+                                                        if (WriteResponse.quorumExists(replies,quorum)) {
+                                                            latch.countDown();
+                                                        }
                                                     }
-                                                    latch.countDown();
                                                 }
                                                 case RESPONSE_NOT_SET -> {
                                                 }
@@ -277,10 +299,13 @@ public class Client {
                     }
                 });
             }
-            latch.await();
-            WriteResponse response = WriteResponse.getResult(replies);
-            System.out.println(response.getMessage());
-            return !response.isError();
+            if(latch.await(15, TimeUnit.SECONDS)) { //waits for 15 seconds for a quorum result
+                WriteResponse response = WriteResponse.getResult(replies);
+                System.out.println(response.getMessage());
+                return !response.isError();
+            } else { //result is not achieved
+                System.out.println("OPERATION UNAVAILABLE!");
+            }
         } catch (BaseException | InterruptedException e) {
             Status status = Status.fromThrowable(e);
             System.out.println("ERROR : " + status.getCode() + " : " + status.getDescription());
@@ -298,7 +323,7 @@ public class Client {
             byte[] pubKeyField = pubKey.getEncoded();
 
             List<ReadResponse> replies = Collections.synchronizedList(new ArrayList<>());
-            CountDownLatch latch = new CountDownLatch(ServerConnection.getConnection().size() / 2 + 1);
+            CountDownLatch latch = new CountDownLatch(ServerConnection.getConnection().size());
 
             for (ServerInfo server : ServerConnection.getConnection()) {
                 SecureRandom random = new SecureRandom();
@@ -329,15 +354,15 @@ public class Client {
                                         checkAccountCheckResponse(server.getPublicKey().getEncoded(), response.getCheckAccount().getSignature().toByteArray(), response.getCheckAccount().getBalance(), response.getCheckAccount().getTransactionsList().toArray());
                                         synchronized (replies) {
                                             replies.add(new ReadResponse(server, response, false, "", response.getCheckAccount().getTransactionsList(),response.getCheckAccount().getBalance()));
+                                            latch.countDown();
                                         }
-                                        latch.countDown();
                                     }
                                     case ERROR -> {
                                         errorCheckSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),pubKeyField,response.getError().getMessage());
                                         synchronized (replies) {
                                             replies.add(new ReadResponse(server, response, true, response.getError().getMessage(), new ArrayList<>(),0));
+                                            latch.countDown();
                                         }
-                                        latch.countDown();
                                     }
                                     case RESPONSE_NOT_SET -> {
                                     }
@@ -368,12 +393,15 @@ public class Client {
                         }
                     });
             }
-            latch.await();
-            ReadResponse response = ReadResponse.getResult(replies);
-            System.out.println(response.getMessage());
-            if(!response.isError()){
-                //todo return to user and update servers?
-                return Pair.with(response.getBalance(),response.getTransactions());
+            if(latch.await(15, TimeUnit.SECONDS)) { //waits for 15 seconds for a quorum result
+                ReadResponse response = ReadResponse.getResult(replies);
+                System.out.println(response.getMessage());
+                if (!response.isError()) {
+                    updateServers(replies,response);
+                    return Pair.with(response.getBalance(), response.getTransactions());
+                }
+            } else {
+                System.out.println("OPERATION UNAVAILABLE!");
             }
         } catch (BaseException | InterruptedException e) {
             Status status = Status.fromThrowable(e);
@@ -391,7 +419,7 @@ public class Client {
             byte[] pubKeyField = key.getEncoded();
 
             List<ReadResponse> replies = Collections.synchronizedList(new ArrayList<>());
-            CountDownLatch latch = new CountDownLatch(ServerConnection.getServerCount() / 2 + 1);
+            CountDownLatch latch = new CountDownLatch(ServerConnection.getConnection().size());
 
             for (ServerInfo server : ServerConnection.getConnection()) {
                 SecureRandom random = new SecureRandom();
@@ -428,15 +456,15 @@ public class Client {
                                                     auditCheckResponse(server.getPublicKey().getEncoded(), response.getAudit().getSignature().toByteArray(), response.getAudit().getTransactionsList().toArray());
                                                     synchronized (replies) {
                                                         replies.add(new ReadResponse(server, response, false, "", response.getAudit().getTransactionsList(),0));
+                                                        latch.countDown();
                                                     }
-                                                    latch.countDown();
                                                 }
                                                 case ERROR -> {
                                                     checkSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),pubKeyField, KeyStore.getPublicKey().getEncoded() ,response.getError().getMessage());
                                                     synchronized (replies) {
                                                         replies.add(new ReadResponse(server, response, true, response.getError().getMessage(), new ArrayList<>(),0));
+                                                        latch.countDown();
                                                     }
-                                                    latch.countDown();
                                                 }
                                                 case RESPONSE_NOT_SET -> {
                                                 }
@@ -469,12 +497,15 @@ public class Client {
                     }
                 });
             }
-            latch.await();
-            ReadResponse response = ReadResponse.getResult(replies);
-            System.out.println(response.getMessage());
-            if(!response.isError()){
-                //todo update servers?
-                return response.getTransactions();
+            if(latch.await(15, TimeUnit.SECONDS)) { //waits for 15 seconds for a quorum result
+                ReadResponse response = ReadResponse.getResult(replies);
+                System.out.println(response.getMessage());
+                if (!response.isError()) {
+                    updateServers(replies,response);
+                    return response.getTransactions();
+                }
+            } else {
+                System.out.println("OPERATION UNAVAILABLE!");
             }
         } catch (StatusRuntimeException | InterruptedException e) {
             Status status = Status.fromThrowable(e);
@@ -487,10 +518,12 @@ public class Client {
         checkSignature(serverPublicKey, signature, transactionList);
     }
 
-    public static void updateServers(List<ReadResponse> responses, ReadResponse result,List<ServerInfo> serverToUpdate) {
+    public static void updateServers(List<ReadResponse> responses, ReadResponse result) {
         List<ReadResponse> responsesQuorum = ReadResponse.getResponseQuorum(responses, result);
-        for (ServerInfo s : serverToUpdate) {
-            //todo call endpoint --
+        for (ReadResponse r : responses) {
+            if(!r.equals(result)){
+                //todo call endpoint
+            }
         }
     }
 

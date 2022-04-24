@@ -37,6 +37,16 @@ public class ReadResponse {
     }
 
     public static ReadResponse getResult(List<ReadResponse> responseList) {
+        Map.Entry<ReadResponse, Integer> max = getMostCommonResponse(responseList);
+        return max.getKey();
+    }
+
+    public static boolean quorumExists(List<ReadResponse> responseList, int quorum) {
+        Map.Entry<ReadResponse, Integer> max = getMostCommonResponse(responseList);
+        return max.getValue() >= quorum;
+    }
+
+    public static Map.Entry<ReadResponse, Integer> getMostCommonResponse(List<ReadResponse> responseList) {
         Map<ReadResponse, Integer> map = new HashMap<>();
 
         for(ReadResponse r : responseList) {
@@ -46,8 +56,7 @@ public class ReadResponse {
 
         System.out.println(map);
 
-        Map.Entry<ReadResponse, Integer> max = Collections.max(map.entrySet(), Comparator.comparing(Map.Entry::getValue));
-        return max.getKey();
+        return Collections.max(map.entrySet(), Comparator.comparing(Map.Entry::getValue));
     }
 
     public static List<ReadResponse> getResponseQuorum(List<ReadResponse> responseList, ReadResponse result) {
@@ -78,5 +87,9 @@ public class ReadResponse {
 
     public int getBalance() {
         return balance;
+    }
+
+    public ServerInfo getServer() {
+        return server;
     }
 }

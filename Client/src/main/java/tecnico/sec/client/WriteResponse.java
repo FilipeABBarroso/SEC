@@ -43,6 +43,16 @@ public class WriteResponse {
     }
 
     public static WriteResponse getResult(List<WriteResponse> responseList) {
+        Map.Entry<WriteResponse, Integer> max = getMostCommonResponse(responseList);
+        return max.getKey();
+    }
+
+    public static boolean quorumExists(List<WriteResponse> responseList, int quorum) {
+        Map.Entry<WriteResponse, Integer> max = getMostCommonResponse(responseList);
+        return max.getValue() >= quorum;
+    }
+
+    public static Map.Entry<WriteResponse, Integer> getMostCommonResponse(List<WriteResponse> responseList) {
         Map<WriteResponse, Integer> map = new HashMap<>();
 
         for(WriteResponse r : responseList) {
@@ -52,7 +62,6 @@ public class WriteResponse {
 
         System.out.println(map);
 
-        Map.Entry<WriteResponse, Integer> max = Collections.max(map.entrySet(), Comparator.comparing(Map.Entry::getValue));
-        return max.getKey();
+        return Collections.max(map.entrySet(), Comparator.comparing(Map.Entry::getValue));
     }
 }
