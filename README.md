@@ -32,10 +32,6 @@ Compile source code
 ```
 mvn compile
 ```
-Compile Test source code
-```
-mvn compile-test
-```
 
 ## Usage
 
