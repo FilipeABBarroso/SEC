@@ -15,6 +15,13 @@ import java.util.*;
 
 public class ServiceImpl extends ServiceImplBase {
 
+    public void validateChallenge(byte[] publicKeySource , ChallengeCompleted solve , long nonce) throws NonceExceptions.NonceNotFoundException, BalanceExceptions.GeneralMYSQLException, KeyExceptions.InvalidPublicKeyException, SignatureExceptions.CanNotSignException, SignatureExceptions.SignatureDoNotMatchException, IOExceptions.IOException, KeyExceptions.NoSuchAlgorithmException {
+        Challenge sentChallenge = Nonce.getNonce(publicKeySource);
+        if(nonce == sentChallenge.getNonce() + 1 && Sign.toHex(solve.getHash().toByteArray()).startsWith("0".repeat(sentChallenge.getZeros()))){
+            Sign.checkSignature(publicKeySource , solve.getHash().toByteArray() , nonce , solve.getPadding());
+        }
+    }
+
     @Override
     public void getChallenge(ChallengeRequest request, StreamObserver<ChallengeResponse> responseObserver) {
         byte[] publicKey = request.getPublicKey().toByteArray();
@@ -107,28 +114,17 @@ public class ServiceImpl extends ServiceImplBase {
         byte[] publicKeyDestination = request.getPublicKeyDestination().toByteArray();
         int amount = request.getAmount();
         long nonce = request.getNonce();
-        Challenge sentChallenge = null;
         try {
-            sentChallenge = Nonce.getNonce(publicKeySource);
-        } catch (NonceExceptions.NonceNotFoundException | BalanceExceptions.GeneralMYSQLException e) {}
-        ChallengeCompleted solve = request.getChallenge();
-        byte[] signature = request.getSignature().toByteArray();
-
-        try {
-            assert(nonce == sentChallenge.getNonce() + 1);
-            assert (Sign.toHex(solve.getHash().toByteArray()).startsWith("0".repeat(sentChallenge.getZeros())));
-            Sign.checkSignature(publicKeySource , solve.getHash().toByteArray() , nonce , solve.getPadding());
-            Sign.checkSignature(publicKeySource, signature, publicKeySource , publicKeyDestination , amount , nonce , solve);
-            System.out.println(1);
+            validateChallenge(publicKeySource , request.getChallenge() , request.getNonce());
+            byte[] signature = request.getSignature().toByteArray();
+            Sign.checkSignature(publicKeySource, signature, publicKeySource , publicKeyDestination , amount , nonce , request.getChallenge());
             Transactions.addTransaction(publicKeySource , publicKeyDestination , amount , nonce , signature);
-            System.out.println(2);
             byte[] signedIncrementedNonce = Sign.signMessage(publicKeySource , publicKeyDestination , amount , nonce + 1);
             SendAmount sendAmount = SendAmount.newBuilder().setSignature(ByteString.copyFrom(signedIncrementedNonce)).build();
             responseObserver.onNext(SendAmountResponse.newBuilder().setSendAmount(sendAmount).build());
             responseObserver.onCompleted();
         } catch (BaseException e) {
             try {
-                //responseObserver.onError(ex);
                 String errorMessage = e.toResponseException().getMessage();
                 byte[] signedPublicKey = Sign.signMessage(publicKeySource , publicKeyDestination , amount , nonce + 1 , errorMessage);
                 Error error = Error.newBuilder().setMessage(errorMessage).setSignature(ByteString.copyFrom(signedPublicKey)).build();
@@ -146,6 +142,7 @@ public class ServiceImpl extends ServiceImplBase {
         byte[] signature = request.getSignature().toByteArray();
 
         try {
+            validateChallenge(publicKey , request.getChallenge() , request.getNonce());
             Sign.checkSignature(publicKey, signature, publicKey , transactionID);
             Transactions.changeStatus(transactionID , publicKey);
             byte[] signedFields = Sign.signMessage(publicKey , transactionID);
@@ -170,6 +167,7 @@ public class ServiceImpl extends ServiceImplBase {
         byte[] publicKey = request.getPublicKey().toByteArray();
 
         try {
+            validateChallenge(publicKey , request.getChallenge() , request.getNonce());
             int balance = Balance.getBalance(publicKey);
             List<Transaction> transactions = Transactions.getPendingTransactions(publicKey);
             CheckAccount.Builder builder = CheckAccount.newBuilder();
@@ -180,15 +178,24 @@ public class ServiceImpl extends ServiceImplBase {
             responseObserver.onNext(CheckAccountResponse.newBuilder().setCheckAccount(builder.build()).build());
             responseObserver.onCompleted();
         } catch (BaseException e) {
-            responseObserver.onError(e.toResponseException());
+            try {
+                String errorMessage = e.toResponseException().getMessage();
+                byte[] signedPublicKey = Sign.signMessage(publicKey , errorMessage);
+                Error error = Error.newBuilder().setMessage(errorMessage).setSignature(ByteString.copyFrom(signedPublicKey)).build();
+                responseObserver.onNext(CheckAccountResponse.newBuilder().setError(error).build());
+                responseObserver.onCompleted();
+            } catch (BaseException ignored){
+            }
         }
     }
 
     @Override
     public void audit(AuditRequest request, StreamObserver<AuditResponse> responseObserver) {
         byte[] publicKey = request.getPublicKey().toByteArray();
+        byte[] selfPublicKey = request.getSelfPublicKey().toByteArray();
 
         try {
+            validateChallenge(selfPublicKey , request.getChallenge() , request.getNonce());
             List<Transaction> transactions = Transactions.getTransactions(publicKey);
             Audit.Builder builder = Audit.newBuilder();
             builder.addAllTransactions(transactions);
@@ -197,7 +204,14 @@ public class ServiceImpl extends ServiceImplBase {
             responseObserver.onNext(AuditResponse.newBuilder().setAudit(builder.build()).build());
             responseObserver.onCompleted();
         } catch (BaseException e) {
-            responseObserver.onError(e.toResponseException());
+            try {
+                String errorMessage = e.toResponseException().getMessage();
+                byte[] signedPublicKey = Sign.signMessage(publicKey ,  selfPublicKey, errorMessage);
+                Error error = Error.newBuilder().setMessage(errorMessage).setSignature(ByteString.copyFrom(signedPublicKey)).build();
+                responseObserver.onNext(AuditResponse.newBuilder().setError(error).build());
+                responseObserver.onCompleted();
+            } catch (BaseException ignored){
+            }
         }
     }
 }

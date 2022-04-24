@@ -66,6 +66,8 @@ message ReceiveAmountRequest {
   bytes publicKey = 1;
   int32 transactionID = 2;
   bytes signature = 3;
+  int64 nonce = 4;
+  ChallengeCompleted challenge = 5;
 }
 message ReceiveAmountResponse {
   oneof response{
@@ -79,6 +81,9 @@ message ReceiveAmount {
 
 message CheckAccountRequest {
   bytes publicKey = 1;
+  int64 nonce = 2;
+  ChallengeCompleted challenge = 3;
+
 }
 message CheckAccountResponse {
   oneof response{
@@ -94,6 +99,9 @@ message CheckAccount {
 
 message AuditRequest {
   bytes publicKey = 1;
+  bytes selfPublicKey = 2;
+  int64 nonce = 3;
+  ChallengeCompleted challenge = 4;
 }
 message AuditResponse {
   oneof response{
@@ -109,6 +117,8 @@ message Audit {
 message UpdateTransactionsRequest {
   repeated Transaction transactions = 1;
   Quorum quorum = 2;
+  int64 nonce = 3;
+  ChallengeCompleted challenge = 4;
 }
 
 message Quorum {

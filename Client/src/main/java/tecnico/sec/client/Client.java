@@ -202,39 +202,69 @@ public class Client {
             byte[] pubKeyField = pubKey.getEncoded();
             byte[] signature = signMessage(pubKeyField, transactionID);
 
-            ReceiveAmountRequest request = ReceiveAmountRequest.newBuilder()
-                    .setPublicKey(ByteString.copyFrom(pubKeyField))
-                    .setTransactionID(transactionID)
-                    .setSignature(ByteString.copyFrom(signature))
-                    .build();
-
             List<WriteResponse> replies = Collections.synchronizedList(new ArrayList<>());
             CountDownLatch latch = new CountDownLatch(ServerConnection.getServerCount() / 2 + 1);
 
             for (ServerInfo server : ServerConnection.getConnection()) {
-                server.getStub().receiveAmount(request, new StreamObserver<ReceiveAmountResponse>() {
+                SecureRandom random = new SecureRandom();
+                long clientNonce = random.nextLong();
+                ChallengeRequest challengeRequest = ChallengeRequest.newBuilder().setPublicKey(ByteString.copyFrom(pubKeyField)).setNonce(clientNonce).build();
+                server.getStub().getChallenge(challengeRequest,  new StreamObserver<ChallengeResponse>() {
                     @Override
-                    public void onNext(ReceiveAmountResponse response) {
-                        try {
-                            switch (response.getResponseCase()) {
-                                case RECEIVEAMOUNT -> {
-                                    receiveAmountCheckResponse(server.getPublicKey().getEncoded(), response.getReceiveAmount().getSignature().toByteArray(), pubKeyField, transactionID);
-                                    synchronized (replies) {
-                                        replies.add(new WriteResponse(response, false, ""));
-                                    }
-                                    latch.countDown();
+                    public void onNext(ChallengeResponse response) {
+                        switch (response.getResponseCase()) {
+                            case CHALLENGE -> {
+                                ChallengeCompleted result = null;
+                                try {
+                                    result = Sign.solveChallenge(response.getChallenge().getZeros() , response.getChallenge().getNonce());
+                                } catch (Exception e) {
                                 }
-                                case ERROR -> {
-                                    checkSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),pubKeyField,transactionID,response.getError().getMessage());
-                                    synchronized (replies) {
-                                        replies.add(new WriteResponse(response, true, response.getError().getMessage()));
+                                long nonce = response.getChallenge().getNonce();
+                                ReceiveAmountRequest request = ReceiveAmountRequest.newBuilder()
+                                        .setPublicKey(ByteString.copyFrom(pubKeyField))
+                                        .setTransactionID(transactionID)
+                                        .setSignature(ByteString.copyFrom(signature))
+                                        .setNonce(nonce + 1)
+                                        .setChallenge(result)
+                                        .build();
+                                server.getStub().receiveAmount(request, new StreamObserver<ReceiveAmountResponse>() {
+                                    @Override
+                                    public void onNext(ReceiveAmountResponse response) {
+                                        try {
+                                            switch (response.getResponseCase()) {
+                                                case RECEIVEAMOUNT -> {
+                                                    receiveAmountCheckResponse(server.getPublicKey().getEncoded(), response.getReceiveAmount().getSignature().toByteArray(), pubKeyField, transactionID);
+                                                    synchronized (replies) {
+                                                        replies.add(new WriteResponse(response, false, ""));
+                                                    }
+                                                    latch.countDown();
+                                                }
+                                                case ERROR -> {
+                                                    checkSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(), pubKeyField, transactionID, response.getError().getMessage());
+                                                    synchronized (replies) {
+                                                        replies.add(new WriteResponse(response, true, response.getError().getMessage()));
+                                                    }
+                                                    latch.countDown();
+                                                }
+                                                case RESPONSE_NOT_SET -> {
+                                                }
+                                            }
+                                        } catch (BaseException ignored) {
+                                        }
                                     }
-                                    latch.countDown();
+                                        @Override
+                                        public void onError(Throwable t) {
+                                            System.out.println("Error occurred " + t.getMessage());
+                                        }
+
+                                        @Override
+                                        public void onCompleted() {
+                                        }
+                                    });
                                 }
-                                case RESPONSE_NOT_SET -> {
+                                case ERROR, RESPONSE_NOT_SET -> {
                                 }
                             }
-                        } catch(BaseException ignored){}
                     }
 
                     @Override
@@ -267,48 +297,76 @@ public class Client {
             PublicKey pubKey = KeyStore.getPublicKey();
             byte[] pubKeyField = pubKey.getEncoded();
 
-            CheckAccountRequest request = CheckAccountRequest.newBuilder()
-                    .setPublicKey(ByteString.copyFrom(pubKeyField))
-                    .build();
-
             List<ReadResponse> replies = Collections.synchronizedList(new ArrayList<>());
             CountDownLatch latch = new CountDownLatch(ServerConnection.getConnection().size() / 2 + 1);
 
             for (ServerInfo server : ServerConnection.getConnection()) {
-                server.getStub().checkAccount(request,  new StreamObserver<CheckAccountResponse>() {
+                SecureRandom random = new SecureRandom();
+                long clientNonce = random.nextLong();
+                ChallengeRequest challengeRequest = ChallengeRequest.newBuilder().setPublicKey(ByteString.copyFrom(pubKeyField)).setNonce(clientNonce).build();
+                server.getStub().getChallenge(challengeRequest,  new StreamObserver<ChallengeResponse>() {
                     @Override
-                    public void onNext(CheckAccountResponse response) {
-                        try {
-                            switch (response.getResponseCase()) {
-                                case CHECKACCOUNT -> {
-                                    checkAccountCheckResponse(server.getPublicKey().getEncoded(), response.getCheckAccount().getSignature().toByteArray(), response.getCheckAccount().getBalance(), response.getCheckAccount().getTransactionsList().toArray());
-                                    synchronized (replies) {
-                                        replies.add(new ReadResponse(server, response, false, "", response.getCheckAccount().getTransactionsList(),response.getCheckAccount().getBalance()));
+                    public void onNext(ChallengeResponse response) {
+                        switch (response.getResponseCase()) {
+                            case CHALLENGE -> {
+                                ChallengeCompleted result = null;
+                                try {
+                                    result = Sign.solveChallenge(response.getChallenge().getZeros() , response.getChallenge().getNonce());
+                                } catch (Exception e) {
+                                }
+                                long nonce = response.getChallenge().getNonce();
+                                CheckAccountRequest request = CheckAccountRequest.newBuilder()
+                                        .setPublicKey(ByteString.copyFrom(pubKeyField))
+                                        .setNonce(nonce+1)
+                                        .setChallenge(result)
+                                        .build();
+                    server.getStub().checkAccount(request,  new StreamObserver<CheckAccountResponse>() {
+                        @Override
+                        public void onNext(CheckAccountResponse response) {
+                            try {
+                                switch (response.getResponseCase()) {
+                                    case CHECKACCOUNT -> {
+                                        checkAccountCheckResponse(server.getPublicKey().getEncoded(), response.getCheckAccount().getSignature().toByteArray(), response.getCheckAccount().getBalance(), response.getCheckAccount().getTransactionsList().toArray());
+                                        synchronized (replies) {
+                                            replies.add(new ReadResponse(server, response, false, "", response.getCheckAccount().getTransactionsList(),response.getCheckAccount().getBalance()));
+                                        }
+                                        latch.countDown();
                                     }
-                                    latch.countDown();
-                                }
-                                case ERROR -> {
-                                    errorCheckSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),pubKeyField,response.getError().getMessage());
-                                    synchronized (replies) {
-                                        replies.add(new ReadResponse(server, response, true, response.getError().getMessage(), new ArrayList<>(),0));
+                                    case ERROR -> {
+                                        errorCheckSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),pubKeyField,response.getError().getMessage());
+                                        synchronized (replies) {
+                                            replies.add(new ReadResponse(server, response, true, response.getError().getMessage(), new ArrayList<>(),0));
+                                        }
+                                        latch.countDown();
                                     }
-                                    latch.countDown();
+                                    case RESPONSE_NOT_SET -> {
+                                    }
                                 }
-                                case RESPONSE_NOT_SET -> {
-                                }
+                            } catch(BaseException ignored){}
+                        }
+
+                        @Override
+                        public void onError(Throwable t) {
+                            System.out.println("Error occurred " + t.getMessage());
+                        }
+                        @Override
+                        public void onCompleted() {}
+                        }
+                    );
                             }
-                        } catch(BaseException ignored){}
-                    }
+                            case ERROR, RESPONSE_NOT_SET -> {}
+                            }
+                        }
 
-                    @Override
-                    public void onError(Throwable t) {
-                        System.out.println("Error occurred " + t.getMessage());
-                    }
+                        @Override
+                        public void onError(Throwable t) {
+                            System.out.println("Error occurred " + t.getMessage());
+                        }
 
-                    @Override
-                    public void onCompleted() {
-                    }
-                });
+                        @Override
+                        public void onCompleted() {
+                        }
+                    });
             }
             latch.await();
             ReadResponse response = ReadResponse.getResult(replies);
@@ -331,37 +389,74 @@ public class Client {
     public static List<Transaction> audit(PublicKey key) {
         try {
             byte[] pubKeyField = key.getEncoded();
-            AuditRequest request = AuditRequest.newBuilder()
-                    .setPublicKey(ByteString.copyFrom(pubKeyField))
-                    .build();
 
             List<ReadResponse> replies = Collections.synchronizedList(new ArrayList<>());
             CountDownLatch latch = new CountDownLatch(ServerConnection.getServerCount() / 2 + 1);
 
             for (ServerInfo server : ServerConnection.getConnection()) {
-                server.getStub().audit(request, new StreamObserver<AuditResponse>() {
+                SecureRandom random = new SecureRandom();
+                long clientNonce = random.nextLong();
+                ChallengeRequest challengeRequest = ChallengeRequest.newBuilder().setPublicKey(ByteString.copyFrom(pubKeyField)).setNonce(clientNonce).build();
+                server.getStub().getChallenge(challengeRequest,  new StreamObserver<ChallengeResponse>() {
                     @Override
-                    public void onNext(AuditResponse response) {
-                        try {
-                            switch (response.getResponseCase()) {
-                                case AUDIT -> {
-                                    auditCheckResponse(server.getPublicKey().getEncoded(), response.getAudit().getSignature().toByteArray(), response.getAudit().getTransactionsList().toArray());
-                                    synchronized (replies) {
-                                        replies.add(new ReadResponse(server, response, false, "", response.getAudit().getTransactionsList(),0));
+                    public void onNext(ChallengeResponse response) {
+                        switch (response.getResponseCase()) {
+                            case CHALLENGE -> {
+                                ChallengeCompleted result = null;
+                                try {
+                                    result = Sign.solveChallenge(response.getChallenge().getZeros() , response.getChallenge().getNonce());
+                                } catch (Exception e) {
+                                }
+                                long nonce = response.getChallenge().getNonce();
+                                AuditRequest request = null;
+                                try {
+                                    request = AuditRequest.newBuilder()
+                                            .setPublicKey(ByteString.copyFrom(pubKeyField))
+                                            .setSelfPublicKey(ByteString.copyFrom(KeyStore.getPublicKey().getEncoded()))
+                                            .setNonce(nonce)
+                                            .setChallenge(result)
+                                            .build();
+                                } catch (KeyExceptions.GeneralKeyStoreErrorException e) {
+                                    e.printStackTrace();
+                                }
+                                server.getStub().audit(request, new StreamObserver<AuditResponse>() {
+                                    @Override
+                                    public void onNext(AuditResponse response) {
+                                        try {
+                                            switch (response.getResponseCase()) {
+                                                case AUDIT -> {
+                                                    auditCheckResponse(server.getPublicKey().getEncoded(), response.getAudit().getSignature().toByteArray(), response.getAudit().getTransactionsList().toArray());
+                                                    synchronized (replies) {
+                                                        replies.add(new ReadResponse(server, response, false, "", response.getAudit().getTransactionsList(),0));
+                                                    }
+                                                    latch.countDown();
+                                                }
+                                                case ERROR -> {
+                                                    checkSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),pubKeyField, KeyStore.getPublicKey().getEncoded() ,response.getError().getMessage());
+                                                    synchronized (replies) {
+                                                        replies.add(new ReadResponse(server, response, true, response.getError().getMessage(), new ArrayList<>(),0));
+                                                    }
+                                                    latch.countDown();
+                                                }
+                                                case RESPONSE_NOT_SET -> {
+                                                }
+                                            }
+                                        } catch(BaseException ignored){}
                                     }
-                                    latch.countDown();
-                                }
-                                case ERROR -> {
-                                    errorCheckSignature(server.getPublicKey().getEncoded(), response.getError().getSignature().toByteArray(),pubKeyField,response.getError().getMessage());
-                                    synchronized (replies) {
-                                        replies.add(new ReadResponse(server, response, true, response.getError().getMessage(), new ArrayList<>(),0));
+
+                                    @Override
+                                    public void onError(Throwable t) {
+                                        System.out.println("Error occurred " + t.getMessage());
                                     }
-                                    latch.countDown();
-                                }
-                                case RESPONSE_NOT_SET -> {
-                                }
+
+                                    @Override
+                                    public void onCompleted() {
+                                    }
+                                });
+
                             }
-                        } catch(BaseException ignored){}
+                            case ERROR, RESPONSE_NOT_SET -> {}
+                        }
                     }
 
                     @Override
